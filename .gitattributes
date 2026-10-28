@@ -1,0 +1,5 @@
+# Preserve native source-manifest byte identity across Git checkouts.
+Source/** -text
+*.sh text eol=lf
+*.cmd -text
+*.png -text

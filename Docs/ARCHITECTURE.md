@@ -73,7 +73,7 @@ Reports retain actual counts/provenance; Best/Recent display limits and top-repo
 - Keep typed Walk/verifier contexts and the same admitted predicate; do not reinterpret unrelated state structs.
 - Derive coefficient parameters from the actual specialization. Generic formulas do not replace the explicit `P<80>` override.
 - Preserve positive/negative whole-PRP fixtures, cold/warm contexts, complete words, guards and input immutability. Matching coefficient golds alone cannot validate the actual caller.
-- Arithmetic copies use separate namespaces and unique per-path include guards. Reintroducing `#pragma once` for byte-identical copies can suppress another namespace's definitions under the POSIX CUDA preprocessor.
+- Arithmetic copies use separate namespaces. The POSIX build stages unique per-path include guards; Windows retains the original headers. `#pragma once` on byte-identical copies can suppress another namespace's definitions under the POSIX CUDA preprocessor.
 - Public input is67–80 bits, but Native admission additionally checks origin, halo, descriptor/memory limits and one low64 window. Some boundary-crossing intervals are refused; positions must not be silently discarded.
 - Pre-sieve work can remove a test only through a valid composite witness. Reported-gap soundness and exhaustive coverage are separate obligations.
 - Component tests, context size or register counts do not establish end-to-end performance. The existing generic diagnostic alone does not prove that every selected production route was exercised.
