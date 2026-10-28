@@ -1,0 +1,34 @@
+BUILD FROM SOURCE
+=================
+Compilation is optional. Tested toolchains: Python3.12, CUDA12.8,
+VS2022/MSVC14.36 on Windows; Ubuntu24.04/GCC13 on Linux.
+Compilation does not use a GPU. A compatible NVIDIA driver is needed to run.
+
+WINDOWS x64
+-----------
+Install Python3.12, VS2022 C++ tools and CUDA12.8. Open an x64 Native Tools
+Command Prompt, change into this Source folder, then:
+  python -m pip install -r requirements-build.txt
+  python build.py --archs 86,120 --package
+Result: build/windows/pgn68/. Copy the COMPLETE directory.
+
+UBUNTU24.04 x86_64
+-----------------
+Install Python3.12/dev headers, build-essential, GCC13 and CUDA12.8.
+Create a virtual environment in this Source folder:
+  python3 -m venv .venv
+  . .venv/bin/activate
+  python -m pip install -r requirements-build.txt
+  CXX=g++-13 python build.py --archs 86,120 --package
+Result: build/ubuntu/pgn68/. Copy the COMPLETE directory.
+Use --archs 86 or --archs 120 to build one target only.
+
+SOURCE EXECUTION after building Native
+-------------------------------------
+  python frontend/pgn68.py --idle
+Linux also set LD_LIBRARY_PATH to the absolute frontend/lib directory.
+The CLI and parameters match the bundled program. Use --help.
+
+The build hashes the exact native inputs and worker images into .module.json
+sidecars. Changing source creates a new fingerprint. Preserve bin/compat from
+an installed release for checkpoints pinned to older worker images.

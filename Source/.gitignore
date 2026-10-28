@@ -1,0 +1,7 @@
+/build/
+/frontend/bin/
+/frontend/lib/
+/results/
+__pycache__/
+*.pyc
+.venv/

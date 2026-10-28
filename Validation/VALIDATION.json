@@ -1,0 +1,243 @@
+{
+  "schema": "SCOUT_RELEASE_VALIDATION_1",
+  "version": "1.2.0-rc1",
+  "Windows_actual_hardware": "NVIDIA GeForce RTX3090 sm86",
+  "Windows_frontend_sha256": "A9B1031CF49BC8A7F4673B22FD63B2DD8DCE05145ADA9F4C0D7012514AFA0D5F",
+  "Ubuntu_frontend_sha256": "68FFEB721C8290A7CA754CAE2FB99F52084E31499A4A832F7EF6536CF1D4FFD3",
+  "backend_routes": [
+    {
+      "bits": 67,
+      "start": "100000000000000000000",
+      "gap": 954,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=WHOLE68_H5_STATE8 high=5 gap_min=954 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 68,
+      "start": "200000000000000000000",
+      "gap": 960,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=WHOLE68_H10_STATE8 high=10 gap_min=960 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 69,
+      "start": "400000000000000000000",
+      "gap": 982,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED69_FULLCARRY97_H21_STATE32 high=21 gap_min=982 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 70,
+      "start": "800000000000000000000",
+      "gap": 994,
+      "positions": "24000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=WHOLE68_TOTAL70_H43_STATE8 high=43 gap_min=994 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 71,
+      "start": "1500000000000000000000",
+      "gap": 1008,
+      "positions": "24000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=WHOLE68_TOTAL71_H81_STATE8 high=81 gap_min=1008 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 72,
+      "start": "3000000000000000000000",
+      "gap": 1022,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED72_H162_STATE32 high=162 gap_min=1022 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 73,
+      "start": "6000000000000000000000",
+      "gap": 1036,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED73_H325_STATE32 high=325 gap_min=1036 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 74,
+      "start": "10000000000000000000000",
+      "gap": 1050,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED74_H542_STATE32 high=542 gap_min=1050 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 75,
+      "start": "20000000000000000000000",
+      "gap": 1062,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED75_H1084_STATE32 high=1084 gap_min=1062 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 76,
+      "start": "40000000000000000000000",
+      "gap": 1076,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED76_H2168_STATE32 high=2168 gap_min=1076 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 77,
+      "start": "100000000000000000000000",
+      "gap": 1090,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED77_H5421_STATE32 high=5421 gap_min=1090 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 78,
+      "start": "300000000000000000000000",
+      "gap": 1104,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED78_H16263_STATE8 high=16263 gap_min=1104 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 79,
+      "start": "400000000000000000000000",
+      "gap": 1116,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED79_H21684_STATE8 high=21684 gap_min=1116 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    },
+    {
+      "bits": 80,
+      "start": "1000000000000000000000000",
+      "gap": 1130,
+      "positions": "2000000000000",
+      "status": "COMPLETE",
+      "actual_backend": "[pgn-selected-backend] family=RETAINED80_H54210_STATE32 high=54210 gap_min=1130 profile_k=64 retained67_80_points=14",
+      "PASS": true
+    }
+  ],
+  "full24T_science": [
+    {
+      "bits": 70,
+      "gap_count": 86,
+      "exact_retained_gold_equal": true
+    },
+    {
+      "bits": 71,
+      "gap_count": 79,
+      "exact_retained_gold_equal": true
+    }
+  ],
+  "actual_console_mouse_keyboard": {
+    "PASS": true,
+    "physical_human_mouse": false,
+    "events": [
+      "hover highlighted menu [M]",
+      "click menu [M]",
+      "hover highlighted My sessions",
+      "hover highlighted Search ranges",
+      "click Search ranges",
+      "hover highlighted New [N]",
+      "click New [N]",
+      "click Save range [Ctrl+S]",
+      "click Start [Enter]",
+      "repeated Enter during Start",
+      "hover highlighted Pause [P]",
+      "click Pause [P]",
+      "click Resume [P]",
+      "click menu [M]",
+      "click Search ranges",
+      "click New [N]",
+      "click [G]",
+      "click menu [M]",
+      "click Search ranges",
+      "click safe quit [Q]",
+      "click Resume [P]",
+      "abrupt close of own exact UI PID; actual Native orphan drained and sealed",
+      "click Resume [P]",
+      "click menu [M]",
+      "click Developer diagnostics",
+      "click Start recording",
+      "click Stop recording",
+      "click safe quit [Q]"
+    ],
+    "all_native_owners_closed": true
+  },
+  "legacy_resume": {
+    "PASS": true,
+    "original_results_unchanged": true,
+    "worker_sha256": "4005A404CD63BF37DB8CF1EAEC659E2AF2CE8C6256595798976AF0A3F58AAD10",
+    "positions": "24000000000000",
+    "status": "COMPLETE"
+  },
+  "diagnostics": {
+    "ZIP_CRC_and_all_manifest_hashes_verified": true,
+    "summary": {
+      "duration_seconds": 2.062,
+      "duration_source": "sampler",
+      "samples": 2,
+      "recorded": [
+        "Device identity",
+        "Search interval",
+        "Search configuration",
+        "Work counters and rate context",
+        "GPU utilization",
+        "Memory activity",
+        "VRAM usage",
+        "VRAM capacity",
+        "GPU core clock",
+        "GPU memory clock",
+        "GPU power",
+        "GPU temperature",
+        "Clock/throttle reasons"
+      ],
+      "partial": [
+        "Native build/resource receipt"
+      ],
+      "unavailable": [],
+      "not_collected": [
+        "GPU process inventory",
+        "Hardware profiler / SM occupancy counters",
+        "Per-kernel timing or instruction trace",
+        "CPU utilization and host RAM",
+        "VRAM junction or GPU hotspot temperatures"
+      ],
+      "missing_files": [],
+      "errors": [],
+      "throughput_scope": "Coordinator context only; not a qualified Native benchmark.",
+      "automatic_upload": false,
+      "hardware_settings_changed": false
+    }
+  },
+  "Ubuntu": {
+    "ELF_load_help_all8_aliases": true,
+    "real_PTY_events": [
+      "Idle full mining console",
+      "Main menu",
+      "Back to Idle"
+    ],
+    "CUDA_hardware_run": false,
+    "build_platform": "Ubuntu24.04 x86_64"
+  },
+  "sm120": {
+    "compiled_both_platforms": true,
+    "physical_hardware_run": false
+  },
+  "performance": "Functional smoke durations are not formal graph records; paired final-package check recorded separately. Graph uses pure GPU event timing."
+}

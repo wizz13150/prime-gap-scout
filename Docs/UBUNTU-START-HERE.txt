@@ -1,0 +1,36 @@
+UBUNTU / WSL — START HERE
+=========================
+Extract the COMPLETE outer ZIP. Open its Ubuntu folder. There is no second ZIP.
+Right-click the folder background and choose Open in Terminal. Run:
+
+  chmod u+x pgn68 Start-PGN68.sh
+  find bin -type f -name 'pgn68-worker-*' ! -name '*.json' -exec chmod u+x {} +
+  bash Start-PGN68.sh
+
+The complete dashboard opens Idle. M opens the menu; Search ranges > New
+prepares a range; G starts it. P pauses/resumes; Q quits safely.
+
+WSL PATHS
+---------
+Windows Downloads and Linux Downloads are different directories.
+C:\Users\robert\Downloads is /mnt/c/Users/robert/Downloads in Ubuntu.
+Replace robert with the ACTUAL Windows account name and use the extracted
+folder name visible in Explorer:
+
+  cd "/mnt/c/Users/robert/Downloads/PrimeGapScout/Ubuntu"
+  bash Start-PGN68.sh
+
+Alternative: in Ubuntu run explorer.exe . to open the CURRENT Linux folder
+in Windows Explorer, then copy/extract the whole package there.
+Explorer can browse Linux files through:
+  \\wsl.localhost\<your-distro>\home\<your-Linux-user>\
+Run wsl.exe --list --quiet in Windows to see the exact distro name.
+Do not copy only pgn68: bin/, lib/, _internal/ and ui/ belong to the application.
+
+GPU
+---
+Run nvidia-smi first. WSL uses the Windows NVIDIA driver. A CUDA Toolkit is
+not needed to RUN the prebuilt package. The binaries target Ubuntu24.04
+x86_64 and the shipped CUDA architectures; see Validation/VALIDATION.txt.
+Debian is not separately binary-qualified: build on your distribution using
+Source/BUILD.txt rather than assuming a newer Ubuntu binary will load.

@@ -1,0 +1,10 @@
+{
+  "cause": "M582 Tiny.phase inherited runtime __trap high>47, physicalmatrix67..70 passed;71high81 failed before firstpublication",
+  "preserved": "Exact class30 phase (128bit integer mod30030)/30",
+  "replacement": "Reduce high modulo30030 before multiplication; bothterms <30030^2 so uint64 cannot overflow",
+  "CPU_cases": 10060,
+  "PASS": true,
+  "old_sha256": "47EF80EFD05436B94E73F85A86BBF30141A9D7BDC859FAFA46CDF633561E5200",
+  "new_sha256": "E643A63E14CEA75CF0D7F5515E2B7CD325050D43096A2DAA938BF9D11FE75442",
+  "not_GPU_validated_yet": true
+}

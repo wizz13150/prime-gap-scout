@@ -1,0 +1,53 @@
+USER GUIDE
+==========
+New creates a range. Use exact scientific notation, e.g.8e20 and Length1e15.
+Length and exclusive End are alternatives. Arrow keys select; Enter edits;
+Left/Right/Home/End and Backspace edit at the visible cursor. Ctrl+S saves
+directly. Esc / Back leaves the page. Invalid entries do not start work.
+
+Save stores an editable Ready card. Select it and Start [Enter], or use
+Start [G] from the form. Processing requires actual Native progress. If Native
+admission refuses a range, its reason is shown and the Ready card is kept.
+
+Pause requests a checkpoint. Wait for Paused and the Resume button. Starting
+another Ready range first drains/checkpoints the current worker; the old one
+remains Suspended. Pending transitions reject conflicting commands. Safe quit
+overrides a pending switch. Queued ranges follow in order.
+
+Unexpected closes can replay uncommitted work from the verified checkpoint.
+Reopen and Resume. Keep the WHOLE session folder and bin/compat. Compatible
+older checkpoints use their exact worker image. Legacy incompatible formats
+remain history; use the original program to resume those.
+
+My sessions discovers actual saved folders. Arrows/wheel select; Enter opens
+details. Open results on a row opens THAT row's folder. Counts are complete;
+the human report defaults to top100. Best/Recent10 is independent of exports.
+
+Launcher edits save NEXT launch defaults. Range forms edit that range.
+Common settings are at the top; leave advanced overrides blank.
+RESUME and HEADLESS take precedence over the launcher's initial Idle setting.
+Display Rows accepts10–30 and controls BOTH Best and Recent; default10.
+
+Menu3 Developer diagnostics: Start recording, reproduce the behavior, then
+Stop recording. The page shows the ZIP path, contents and recorded/unavailable
+categories. Send that ZIP to the developer. Nothing uploads automatically;
+no GPU clocks, voltage, fan or power settings are changed by the program.
+Unavailable hardware profiling counters are reported explicitly.
+
+DOMAIN
+------
+Input syntax covers [2^66,2^80). Native --plan additionally checks class30
+origin, halo and one low64 window per chunk. Endpoints near a word boundary
+can be refused. Rejected ranges are not searched. Arbitrary boundary-crossing
+intervals are not all admitted. Admitted total lengths are not limited to1e15;
+automatic chunks preserve the requested total.
+Optimized backends are selected for their admitted high-word profiles; the
+general backend covers other admitted inputs. The graph measures specific
+starts and hardware, not a promise of identical speed at every number/GPU.
+
+MERIT
+-----
+Merit=gap/ln(lower prime). Target merit32 is a display goal, separate from
+min-gap. Gold>=32; silver31..<32; bronze30..<31; red29..<30. Entire qualifying
+rows are colored in Best and Recent. Other Recent rows are white; Best can be
+green. Reports contain actual searched positions in scientific notation.

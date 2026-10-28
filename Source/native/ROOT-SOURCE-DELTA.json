@@ -1,0 +1,199 @@
+{
+  "scope": "Production portableworker67..80 broadHIGH singlelowwindow/component; sameH10fastpath retained, stockEuler96 fallback, dynamicactualGapMin, threshold-pinned64BnativeCP, MR13full80-bitbound.",
+  "parent": "ImmutableR5source",
+  "changed": [
+    "continuous-gpu-runtime.cu",
+    "pgn_conditional_walk.cuh",
+    "pgn_mr96.cuh",
+    "release_host_plan.h"
+  ],
+  "unchanged": 40,
+  "Root_checks_unpaid": [
+    "ActualWindows/Ubuntubuild",
+    "currentdevicearchitecturecaps/dynamicKname",
+    "planseams/crosslow64adapter",
+    "fullpredicate/gaps/stop/resume",
+    "frontendCPdecoderandAutoPolicybinding",
+    "optimized67/H5andotherretainedpointmodule routing"
+  ],
+  "not_release_ready": true,
+  "Source_only": true,
+  "files": {
+    "barrett70-baseline.cuh": {
+      "bytes": 6045,
+      "SHA256": "30F42724BCC38CBF139B59D37ABCAA6F27BC6A9BBB7E492E34729AFDAAD57D2B"
+    },
+    "barrett70-exact.cuh": {
+      "bytes": 10407,
+      "SHA256": "6725FF0A413BB0A536E4187B908429108A249AFBBE3BA0060985123C5CB056D3"
+    },
+    "BUILD-NOTES.txt": {
+      "bytes": 3360,
+      "SHA256": "01714C40063C195331830F484963E9D8BD51B68318EC224CEBC77F3F0CFC98F3"
+    },
+    "C25-paired-raw-R64.cuh": {
+      "bytes": 5792,
+      "SHA256": "BD6AA95CA240C779330A1A0368EC87320B92B35CB64FF2C611AA6419143A8621"
+    },
+    "C26-host-domain.h": {
+      "bytes": 3399,
+      "SHA256": "8232F51685F0AAEC7501DAFD44B63EA54E5D262C8A896DBB4E5E54478ACA5E61"
+    },
+    "C29-pairfold-sentinel.cuh": {
+      "bytes": 2814,
+      "SHA256": "B97DA96401773F599A970F442601DD8392A671B00112D0F4B9EB751B73A0DFBD"
+    },
+    "cached-u160-near.cuh": {
+      "bytes": 3671,
+      "SHA256": "AA2C0E2103150A123D3A3165D58D1BD09C9A757EF3EAB367DC1C8D446FBFA7B7"
+    },
+    "cached-u160-oracle.cu": {
+      "bytes": 3686,
+      "SHA256": "20F6A6D471D0E11095C473A3F8B498F02F3DFECFC6FA0C14E37CC3041F626358"
+    },
+    "checkpoint_publish.h": {
+      "bytes": 8501,
+      "SHA256": "30A1B737C0B02FDFAC9BF701C6CADF7C87CF5429F2B25BB4774185ADFE0BCEB5"
+    },
+    "CMakeLists.txt": {
+      "bytes": 4981,
+      "SHA256": "E3A26D38102DCD3EEDCA0B983F765178DC28994F178D77AE2B0E175196C52341"
+    },
+    "cohort16-bitmap-oracle.cu": {
+      "bytes": 6281,
+      "SHA256": "AEAE3C14F812F7EDBD238D94D4F35E87378634949A06D5BCE5B70F40C50644EC"
+    },
+    "continuous-gpu-runtime.cu": {
+      "bytes": 34580,
+      "SHA256": "AB539E1610751BA469C4E5D466CC056EA858C854ACC8DED320F52B4A2D8E9263"
+    },
+    "diagnostic-data-source.json": {
+      "bytes": 859,
+      "SHA256": "1AE64CE90EA4D0C806EB9969C8AB6098D7B577D3C5F756D1C163720249DBA04C"
+    },
+    "DIAGNOSTIC-SOURCE-NOTES.md": {
+      "bytes": 5374,
+      "SHA256": "EB07100F9C99E0F77D823EA838E9ABC0891B0F94728CD8BA4A29EA877032A4BD"
+    },
+    "diagnostic_data.h": {
+      "bytes": 15468,
+      "SHA256": "311CF2E94691E41971565AC165A591C25A573297D5FAE1B42FAE34AFEF89E83F"
+    },
+    "euler96.cuh": {
+      "bytes": 16498,
+      "SHA256": "E3E92B38DDD206D713132D8CDD150FF86CABF17CD015071C00C5FC9C3A3BB66A"
+    },
+    "event-wheel210-prefix.bin": {
+      "bytes": 1612800,
+      "SHA256": "5BEBFE13A2B5329E7415BCA30EB9DF2960A76C09107BC3664C701EED72B5DBC4"
+    },
+    "generate-release-diagnostic.py": {
+      "bytes": 4105,
+      "SHA256": "661D6B9F4F97BD6B9FD715090A0C22B0ED7DA00B9989E10876AB9EB80CE3D121"
+    },
+    "M582-counterfree-cycle8-marker.cuh": {
+      "bytes": 26534,
+      "SHA256": "31DAFC6BE61692C72C530AF9AF69ECBBECB9BE10EBF11268FA6CEB4C760F1B48"
+    },
+    "M582-K64-complete-bitmap-gate.cu": {
+      "bytes": 23619,
+      "SHA256": "C3FEAA2D49871154FBE5BD012F7E583C8FBEC565B0F6E60DC75A3C063490D346"
+    },
+    "M600-fourbit-orbit96.cuh": {
+      "bytes": 9000,
+      "SHA256": "97DB44310CC463A53CE3CD8B95965EC5D9521938FFF70DEF38DDD655B6D3C2F1"
+    },
+    "mr128_64_kernel.cuh": {
+      "bytes": 15508,
+      "SHA256": "FD1CE48F52EB241E739A342C152D7338575B4D2F9FDD60D8FB09130562B1176D"
+    },
+    "p0_types.h": {
+      "bytes": 1325,
+      "SHA256": "7F64A02A15C4D43B20D0EC77D9528766AB8675671CC7D5646A418DCA91635E0F"
+    },
+    "p0_walk_kern.cuh": {
+      "bytes": 40514,
+      "SHA256": "F78A7ADEF75C9A1BF0D46EEC75FAA0B65C3CAF99BB9560E173338531009BD307"
+    },
+    "perig.cuh": {
+      "bytes": 14525,
+      "SHA256": "96605C974D42648957E74B11DF5F5DC522DA57AA5B82B4983AEE447BA696BFDD"
+    },
+    "pgn68.manifest": {
+      "bytes": 555,
+      "SHA256": "CD7FFB203CB27657BD7F5C089C957E0AE2ACE5422840FF5C921AFB332D17B3F1"
+    },
+    "pgn_conditional_walk.cuh": {
+      "bytes": 9423,
+      "SHA256": "D5CD867671C2306D30CCAC9C3888322F7061A1D5040394FEB357D14A0D40F506"
+    },
+    "pgn_event210.cuh": {
+      "bytes": 10000,
+      "SHA256": "8F4F90FB872B534502E53A1BD145E975607FB3FE669EE608C4452337A34A85CC"
+    },
+    "pgn_mr96.cuh": {
+      "bytes": 2270,
+      "SHA256": "2F6DE1A3A7EF4A6D774AC123CD77A702B0B0D38E0A21C2F56132A44F94DAA7F9"
+    },
+    "pgn_periodic_presieve.cuh": {
+      "bytes": 2085,
+      "SHA256": "A27A4CFD08947B48173B549918308D3014FEAD9A7790A71DED2985A686C55E61"
+    },
+    "pgn_smallword.cuh": {
+      "bytes": 6897,
+      "SHA256": "1A0A78435341FFCF02755AFF97B6F06C9CBE6910A6FF66F83C29308ABE3AA962"
+    },
+    "pgn_tinywheel.cuh": {
+      "bytes": 3461,
+      "SHA256": "47EF80EFD05436B94E73F85A86BBF30141A9D7BDC859FAFA46CDF633561E5200"
+    },
+    "portable_platform.h": {
+      "bytes": 829,
+      "SHA256": "E3BDA12B1A4518552CE0E680B328070B47DDBA5C71215FB2DFAB77177714B0C0"
+    },
+    "prefix11-final-oracle.cu": {
+      "bytes": 2468,
+      "SHA256": "CAA5E8F36ADE8C70AFFB8FD5A6C21737F6C3EB3BAA2A117B413561A279601326"
+    },
+    "primitive-oracle.cu": {
+      "bytes": 2582,
+      "SHA256": "A0AFD6A8B2158756308D836D24B197587EFE0A942AAADA6A25DB4A5B69C0AEFB"
+    },
+    "R64lazy32.cuh": {
+      "bytes": 3129,
+      "SHA256": "2AB999A780CC7AC34E274530FB0217BFD5714371BE332C8360FEDF1E26F9C283"
+    },
+    "R64lazy32_prp68.cuh": {
+      "bytes": 7728,
+      "SHA256": "7D6AF47BF2E24AA7193D051A1EBBF2605844D050C7DF98AC960F48285D8D87BB"
+    },
+    "release-selftest.cuh": {
+      "bytes": 17073,
+      "SHA256": "3142E9E1F3CEC174A94A3319ABFD81B631C4B41CA17D44645A0A48C2FBA4D9CD"
+    },
+    "release_host_plan.h": {
+      "bytes": 3385,
+      "SHA256": "47BBB2B0BC65F42B990CD0159FF0F56B1BD2DEA0D6EDFEBE16BA48DDE0C677C1"
+    },
+    "source-imad-device-oracle.cu": {
+      "bytes": 4659,
+      "SHA256": "0B6E749040854FC25990866AC2CF9638D619B67713B63F253B670E5F7AFE5819"
+    },
+    "square-oracle.cu": {
+      "bytes": 5168,
+      "SHA256": "D8B604F9236C82AEDDE0049CBC421E40B41C15E2ADDDFF32939A61A7223BCA39"
+    },
+    "stateful-u160-live.cuh": {
+      "bytes": 1463,
+      "SHA256": "48A5B869F7E5EA90C807F90447A226CED5AC3B95C30E1267CBA355D5AB673830"
+    },
+    "stateful-u160-sequences.bin": {
+      "bytes": 5767184,
+      "SHA256": "963CC21AA944491F16F718F12463428F817B4ADE53365DAEFD7CB7C4BC59469A"
+    },
+    "WORKER-PORT-AUDIT.json": {
+      "bytes": 22394,
+      "SHA256": "FB49FF8C036A0186716E75E5BAEE5CBDF9053F16C68BECC9C662A75C6C7C843F"
+    }
+  }
+}

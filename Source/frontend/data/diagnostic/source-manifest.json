@@ -1,0 +1,58 @@
+{
+  "schema": "PGN68_WINDOWS_PERIG_NVRTC_FALLBACK_SOURCE_V1",
+  "requests": [
+    "BASE845"
+  ],
+  "state": "SOURCE_BUILTINS_LOADER_REPAIR_NOT_GPU_REVALIDATED",
+  "API": "run_diagnostic(gpu:int,output:Path)->int",
+  "files": [
+    {
+      "file": "fermat_compare_nvrtc.py",
+      "bytes": 20205,
+      "sha256": "B123CF48DA494D3437D11FBB31683F68ADB1A422328BEE77D7DABE31A3671B16"
+    },
+    {
+      "file": "data/diagnostic/comparison.cu",
+      "bytes": 47996,
+      "sha256": "FF261951156A7855141A743D7423B4E07A512E8C73085E8EFC525D032C6C374C"
+    },
+    {
+      "file": "data/diagnostic/lows.bin",
+      "bytes": 2192,
+      "sha256": "A7082B9897EF430BD0124D0E65869AF2C3F641C0B0C3445A7E0D41F885BDA6C4"
+    },
+    {
+      "file": "data/diagnostic/expected-euler-jacobi.bin",
+      "bytes": 1096,
+      "sha256": "A55E93D2D58837C2A1D53BE0F615E8A4D755E781D7C65009F5081BE2F0F7E630"
+    },
+    {
+      "file": "data/diagnostic/perig-public-excerpt.cuh",
+      "bytes": 7365,
+      "sha256": "4C22C090C6DA0601B166DB612B2B4A0302D0CF6A49AAAE832002521A9BBC888B"
+    },
+    {
+      "file": "data/diagnostic/README.txt",
+      "bytes": 2307,
+      "sha256": "4A563C90A63FBA6266F189BFE98A68000F6CD86CC2B8A84023CEACBCFD7E4F8E"
+    }
+  ],
+  "static_python_AST_valid": true,
+  "author_execution": {
+    "oracle": false,
+    "compiler": false,
+    "NVRTC": false,
+    "Driver": false,
+    "GPU": false,
+    "WIZZ": false
+  },
+  "Root_required": "FILES/sourcepins; bundleNVRTCandbuiltins; private30numeric/ABBAonGPU; packagefrozenassets/import; noRootrequestterminalstatuschanged",
+  "actual_failure_autopsy": {
+    "scope": "Root actual packagedQA v1942; numerical kernel never launched",
+    "compiler_error": "NVRTC code7: failed to open nvrtc-builtins64_128.dll",
+    "first_compensating_boundary": "Vendor internal DLL search, not integer arithmetic",
+    "repair": "Require matching companion beside NVRTC and preload companion by absolute path before NVRTC; keep handle live through compilation",
+    "Root_retest_required": true,
+    "author_GPU_or_compile_execution": false
+  }
+}

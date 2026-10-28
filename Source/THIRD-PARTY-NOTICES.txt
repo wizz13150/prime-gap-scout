@@ -1,0 +1,52 @@
+PGN 68 — third-party attribution and accompanying texts
+======================================================
+
+Prime-gap and arithmetic source attribution
+-------------------------------------------
+Original CUDA prime-gap work: Brian Kehrig.
+Original CIOS arithmetic acknowledged by that project: Périg.
+Public repository: https://github.com/briankehrig/prime-gaps-cuda
+Public arithmetic comparison source: commit 9d41f2709666d240c073439c37722c6ff6cb5b44.
+PGN optimized search basis: M600, qualified 68-bit H10 implementation.
+Console helpers/layout basis: Horizon RC7 CPU dashboard.
+
+This notice records attribution. It does not invent an SPDX identifier or
+an upstream licence grant for Brian Kehrig's/Périg's public source. Preserve
+the original source acknowledgments with any separately supplied source.
+
+Bundled software components
+---------------------------
+The application is frozen with Python and PyInstaller. Its Rich console uses
+Rich and its included Python dependencies, including Markdown-it-py, mdurl
+and Pygments. The actual frozen Windows distribution also contains NumPy
+and its numerical-runtime libraries. Existing package dist-info licence
+files are preserved in _internal where collected by the freezer.
+
+NVIDIA CUDA Runtime components are supplied for the corresponding workers.
+They retain NVIDIA's own licence and redistribution terms. The optional NVRTC
+fallback uses a separately installed CUDA Toolkit and reports unavailability
+when absent; NVRTC is not bundled. No NVIDIA driver is included; the compatible
+installed driver is used.
+
+The Ubuntu package also bundles libstdc++.so.6 and libgcc_s.so.1. The exact
+Ubuntu gcc-13-base copyright text, including the GCC Runtime Library Exception,
+is included as THIRD-PARTY-LICENSES/Ubuntu-gcc-13-base-copyright.txt.
+
+Exact installed licence/copyright texts copied for this release are under:
+  THIRD-PARTY-LICENSES/
+Their file names, byte lengths and SHA-256 hashes are recorded in:
+  THIRD-PARTY-LICENSES/MANIFEST.json
+
+These include Python's installed licence, PyInstaller's complete COPYING
+(including its application/bootloader exception), Rich, Markdown-it-py,
+mdurl, Pygments, NVIDIA CUDA Runtime and NVRTC licence texts, and collected
+licences from actual frozen package metadata. Ubuntu library copyright
+files are included for the available Python/OpenSSL/libffi/Expat/XZ/bzip2/
+readline/SQLite/ncurses/zlib/libyaml dependencies.
+
+Windows system/Visual C++ runtime files and Ubuntu system libraries remain
+subject to their own suppliers' terms. This notice does not replace those
+terms or relicense any third-party component. Components provided solely
+by the operating system or installed driver are not represented as PGN code.
+
+No diagnostic or report is automatically uploaded by this application.
