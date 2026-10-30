@@ -1,15 +1,13 @@
-Release candidate1.2.0
-=====================
-Standalone67–80-bit search; no wallet/pool/blockchain connection.
-Updated optimized backends retained for the graph's admitted profiles,
-including the70/71 and78/79 measured improvements.
-Start/Resume handoff fixed; no internal MenuAction text in the interface.
-Processing/Ready/Queued/Suspended cards; safe switching and checkpoint recovery.
-Common mouse/keyboard buttons; immediate resize/hover geometry repair.
-Best/Recent rows10–30 (default10); scientific run sizes in reports.
-Active calculation rates exclude initialization and paused intervals.
-Malformed saved-session documents are isolated without removing valid cards.
-Developer recording creates a manifest-verified local ZIP and coverage summary.
-One extracted release tree: no ZIP-inside-ZIP launcher trap or sample results
-which could be mistaken for the user's actual GPU/range/counts.
-The included source and build instructions match this release's code.
+Prime Gap Scout 1.3.1 - local validation candidate
+
+Fix a Windows owner-completion file sharing/access race that could end a valid
+search with PermissionError while reading done.json. Completion polling now
+allows a bounded transient I/O grace period and caches the accepted exact
+receipt. Atomic receipt publication retries only the same fsynced bytes.
+Persistent denial, missing evidence, wrong identity or corrupt metadata remains
+an explicit failure and never becomes a successful completion.
+
+Owner-wait failures are reported separately from timing failures. CUDA engines,
+arithmetic, thresholds and checkpoint compatibility images are unchanged.
+No automatic uploads or GPU setting changes. Awaiting operator validation
+before GitHub publication.

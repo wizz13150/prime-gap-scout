@@ -2,10 +2,10 @@ PGN68 R5 PUBLIC PARAMETER REFERENCE - generated from argparse
 
 EVERYDAY - the usual settings
   --gpu | GPU=0 | Role: Choose a visible GPU index from --list-gpus (default0); no automatic best-GPU selection. Default: 0. Choices/bounds: integer 0 or greater; choose a visible index from List GPUs. Example: 0.
-  --start | START=2e20 | Role: Exact starting integer, default2e20; scientific notation is accepted without float rounding. Default: 2e20. Choices/bounds: exact67..80-bit integer; Native plan also checks class30 origin, one low64 window and halo. Example: 2e20.
+  --start | START=2e20 | Role: Exact starting integer, default2e20; scientific notation is accepted without float rounding. Default: 2e20. Choices/bounds: exact67..95-bit integer; Native plan also checks class30 origin, one low64 window and halo. Example: 2e20.
   --length | LENGTH=1e15 | Role: Exact interval length instead of --end. Default: 1e15. Choices/bounds: positive exact integer; mutually exclusive with END. Example: 1e15.
-  --end | END= | Role: Exclusive endpoint; omit both end/length for START+1e15. Default: blank → START+LENGTH (or START+1e15). Choices/bounds: exclusive67..80-bit endpoint; mutually exclusive with LENGTH. Example: 2.00001e20.
-  --min-gap | MIN_GAP=auto | Role: Auto uses the pinned67..80 integer table; manual integer954..2147483647. Actual worker plan and checkpoint must bind the effective value. Default: auto. Choices/bounds: Auto or integer954..2147483647. Example: auto.
+  --end | END= | Role: Exclusive endpoint; omit both end/length for START+1e15. Default: blank → START+LENGTH (or START+1e15). Choices/bounds: exclusive67..95-bit endpoint; mutually exclusive with LENGTH. Example: 2.00001e20.
+  --min-gap | MIN_GAP=auto | Role: Auto uses the pinned67..95 integer table; manual integer954..2147483647. Actual worker plan and checkpoint must bind the effective value. Default: auto. Choices/bounds: Auto or integer954..2147483647. Example: auto.
   --output | OUTPUT= | Role: Output parent; blank uses the results folder beside the program, with no silent fallback. Default: blank → results beside this program. Choices/bounds: local directory path; no silent fallback if not writable. Example: D:/PGN-results or /home/robert/PGN-results.
   --resume | RESUME= | Role: Resume this durable session directory; input/worker/K/journal binding is verified. Default: blank → new run. Choices/bounds: blank for a new session, or a genuine durable local session folder. Example: results/<actual-session-folder>.
 REPORT AND DISPLAY

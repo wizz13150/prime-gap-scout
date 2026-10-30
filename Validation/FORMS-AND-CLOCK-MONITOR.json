@@ -1,0 +1,9 @@
+{
+  "PASS": true,
+  "form_widths": 29,
+  "adaptive_segments": 29,
+  "invalid_ranges_rejected": 3,
+  "monitor_fresh_stale_error_and_cleanup": true,
+  "exact_frontend_primality_and_boundary": true,
+  "GPU_compute": false
+}

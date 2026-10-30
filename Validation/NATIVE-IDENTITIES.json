@@ -1,0 +1,21 @@
+{
+  "PASS": true,
+  "arithmetic_changes_since29width_GPU_regression": false,
+  "changes": "Invariant comment cleanup and diagnostic text; compiled resource equality is separate evidence, not a performance claim.",
+  "images": [
+    {
+      "arch": 86,
+      "kernel_resources_identical": true,
+      "kernels": 61,
+      "image": "093C8037A6A8BF2082E5AC8A3F85A31B6D57AA6FBCAA741CB99F1FAE3845A91D",
+      "source_mf": "C4B2DEC85A526227644BB315BB348A88D217D2B28D8A0511E065EFDE3C6BFBD0"
+    },
+    {
+      "arch": 120,
+      "kernel_resources_identical": true,
+      "kernels": 61,
+      "image": "83C1FC46B47D46348DFC7DDC865593DD7DA040FFD033B091E090D5288C629C92",
+      "source_mf": "C4B2DEC85A526227644BB315BB348A88D217D2B28D8A0511E065EFDE3C6BFBD0"
+    }
+  ]
+}

@@ -1,20 +1,18 @@
 {
-  "schema": "PGN68_WINDOWS_PERIG_NVRTC_FALLBACK_SOURCE_V1",
-  "requests": [
-    "BASE845"
-  ],
-  "state": "SOURCE_BUILTINS_LOADER_REPAIR_NOT_GPU_REVALIDATED",
-  "API": "run_diagnostic(gpu:int,output:Path)->int",
+  "schema": "SCOUT_DIAGNOSTIC_SOURCE_V1",
+  "upstream_commit": "9d41f2709666d240c073439c37722c6ff6cb5b44",
+  "predicate": "Euler/Jacobi base2",
+  "cases": 274,
   "files": [
     {
       "file": "fermat_compare_nvrtc.py",
-      "bytes": 20205,
-      "sha256": "B123CF48DA494D3437D11FBB31683F68ADB1A422328BEE77D7DABE31A3671B16"
+      "bytes": 23127,
+      "sha256": "C64F80DB09104310116D124EBDDE13423CC837AD88E10F3D0E02C9CC9FC57072"
     },
     {
       "file": "data/diagnostic/comparison.cu",
-      "bytes": 47996,
-      "sha256": "FF261951156A7855141A743D7423B4E07A512E8C73085E8EFC525D032C6C374C"
+      "bytes": 49611,
+      "sha256": "199C9370246DA1156E5BDA798914934B331B60E2B1562DD157CC73A005D4347D"
     },
     {
       "file": "data/diagnostic/lows.bin",
@@ -33,26 +31,9 @@
     },
     {
       "file": "data/diagnostic/README.txt",
-      "bytes": 2307,
-      "sha256": "4A563C90A63FBA6266F189BFE98A68000F6CD86CC2B8A84023CEACBCFD7E4F8E"
+      "bytes": 860,
+      "sha256": "BFA690217F684255332B3FB87C45D723E9E48F510820667C2BD510539E4C0718"
     }
   ],
-  "static_python_AST_valid": true,
-  "author_execution": {
-    "oracle": false,
-    "compiler": false,
-    "NVRTC": false,
-    "Driver": false,
-    "GPU": false,
-    "WIZZ": false
-  },
-  "Root_required": "FILES/sourcepins; bundleNVRTCandbuiltins; private30numeric/ABBAonGPU; packagefrozenassets/import; noRootrequestterminalstatuschanged",
-  "actual_failure_autopsy": {
-    "scope": "Root actual packagedQA v1942; numerical kernel never launched",
-    "compiler_error": "NVRTC code7: failed to open nvrtc-builtins64_128.dll",
-    "first_compensating_boundary": "Vendor internal DLL search, not integer arithmetic",
-    "repair": "Require matching companion beside NVRTC and preload companion by absolute path before NVRTC; keep handle live through compilation",
-    "Root_retest_required": true,
-    "author_GPU_or_compile_execution": false
-  }
+  "qualification": "Independent fixture/file checks required; actual packaged execution recorded in release validation, not inferred from source presence."
 }

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
-project(pgn68_robert_r5 VERSION 1.0.0 LANGUAGES CXX CUDA)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" SCOUT_VERSION LIMIT_COUNT 1)
+project(prime_gap_scout VERSION ${SCOUT_VERSION} LANGUAGES CXX CUDA)
 find_package(CUDAToolkit 12.4 REQUIRED)
 find_package(Threads REQUIRED)
 find_library(PGN_CUDA_DEVICE_RUNTIME NAMES cudadevrt HINTS
@@ -64,7 +65,7 @@ foreach(ARCH IN LISTS PGN_RELEASE_ARCHS)
    message(FATAL_ERROR "K must be8,16,32 or64")
   endif()
   set(TARGET pgn68-worker-sm${ARCH}-k${K})
-  add_executable(${TARGET} continuous-gpu-runtime.cu)
+  add_executable(${TARGET} search_worker.cu)
   set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 17 CUDA_STANDARD 17 CUDA_ARCHITECTURES OFF
    CUDA_SEPARABLE_COMPILATION ON CUDA_RESOLVE_DEVICE_SYMBOLS ON CUDA_RUNTIME_LIBRARY Shared
    INSTALL_RPATH "$ORIGIN/../lib;$ORIGIN" BUILD_WITH_INSTALL_RPATH TRUE)
@@ -79,11 +80,11 @@ foreach(ARCH IN LISTS PGN_RELEASE_ARCHS)
   endif()
   # Conditional graph control uses the device Runtime API: retain RDC and
   # cudadevrt even for an explicit --no-lto build.
-  target_link_libraries(${TARGET} PRIVATE CUDA::cudart "${PGN_CUDA_DEVICE_RUNTIME}" Threads::Threads)
+  target_link_libraries(${TARGET} PRIVATE CUDA::cudart "${PGN_CUDA_DEVICE_RUNTIME}" Threads::Threads ${CMAKE_DL_LIBS})
   if(MSVC)
    set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
    target_compile_options(${TARGET} PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/MT;-Xcompiler=/utf-8>")
-   target_link_options(${TARGET} PRIVATE "LINKER:/MANIFEST:EMBED" "LINKER:/MANIFESTINPUT:${CMAKE_CURRENT_SOURCE_DIR}/pgn68.manifest")
+   target_link_options(${TARGET} PRIVATE "LINKER:/MANIFEST:EMBED" "LINKER:/MANIFESTINPUT:${CMAKE_CURRENT_SOURCE_DIR}/worker.manifest")
   endif()
   install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
  endforeach()

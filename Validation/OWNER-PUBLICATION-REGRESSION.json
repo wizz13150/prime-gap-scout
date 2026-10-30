@@ -1,0 +1,31 @@
+{
+  "release": "1.3.1",
+  "publication_tests_windows": 15,
+  "real_windows_cpu_lifecycles": 24,
+  "portable_tests_linux": 13,
+  "native_engines_changed": false,
+  "GPU_cases": [
+    {
+      "bits": 67,
+      "positions": 6000000000000,
+      "tests": 15368163623,
+      "state": "COMPLETE",
+      "minimum_gap": 954,
+      "closed_chunks": 6,
+      "raw_gaps": 16,
+      "golden95_exact_match": false
+    },
+    {
+      "bits": 95,
+      "positions": 2000000000000,
+      "tests": 5198614935,
+      "state": "COMPLETE",
+      "minimum_gap": 1332,
+      "closed_chunks": 2,
+      "raw_gaps": 8,
+      "golden95_exact_match": true
+    }
+  ],
+  "Windows_image_sha256": "DB4BBCEBA9E9E80F8D4DB9B14FCF6BE2F2123D9B31495878D0F2EB516A37DA4B",
+  "operator_validation_pending": true
+}

@@ -1,34 +1,42 @@
 BUILD FROM SOURCE
 =================
-Compilation is optional. Tested toolchains: Python3.12, CUDA12.8,
-VS2022/MSVC14.36 on Windows; Ubuntu24.04/GCC13 on Linux.
-Compilation does not use a GPU. A compatible NVIDIA driver is needed to run.
+Validated frontend interpreters: Python3.10 on Windows andPython3.12 on Ubuntu.
+CUDA12.8, VS2022/MSVC14.36 on Windows; Ubuntu24.04/GCC13 on Linux. Compilation does not require a GPU.
 
-WINDOWS x64
------------
-Install Python3.12, VS2022 C++ tools and CUDA12.8. Open an x64 Native Tools
-Command Prompt, change into this Source folder, then:
+Install the build requirements in a local virtual environment:
   python -m pip install -r requirements-build.txt
-  python build.py --archs 86,120 --package
-Result: build/windows/pgn68/. Copy the COMPLETE directory.
 
-UBUNTU24.04 x86_64
------------------
-Install Python3.12/dev headers, build-essential, GCC13 and CUDA12.8.
-Create a virtual environment in this Source folder:
-  python3 -m venv .venv
-  . .venv/bin/activate
-  python -m pip install -r requirements-build.txt
-  CXX=g++-13 python build.py --archs 86,120 --package
-Result: build/ubuntu/pgn68/. Copy the COMPLETE directory.
-Use --archs 86 or --archs 120 to build one target only.
+EXACT PROOF RUNTIME
+-------------------
+The build bundles shared FLINT/GMP/MPFR libraries from a python-flint0.7.1
+wheel. Its Python extension is not loaded; only the shared runtime and licenses
+are included. Supply an explicit platform wheel, or retain the supplied matching
+frontend/lib/proof directory and its fingerprinted manifest.
 
-SOURCE EXECUTION after building Native
--------------------------------------
+Windows wheel (use an x64 Native Tools Command Prompt):
+  python -m pip download --only-binary=:all: --no-deps --platform win_amd64 --python-version 312 --implementation cp --abi cp312 --dest dependencies python-flint==0.7.1
+  python build.py --proof-wheel dependencies/python_flint-0.7.1-cp312-cp312-win_amd64.whl --archs 86,120 --package
+
+Ubuntu wheel (activate your Python virtual environment):
+  python -m pip download --only-binary=:all: --no-deps --platform manylinux2014_x86_64 --python-version 312 --implementation cp --abi cp312 --dest dependencies python-flint==0.7.1
+  CXX=g++-13 python build.py --proof-wheel dependencies/python_flint-0.7.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl --archs 86,120 --package
+
+If the matching proof runtime is already bundled, omit --proof-wheel.
+Use --archs86 or --archs120 to compile only one supported architecture.
+Results: build/windows/pgn68/ or build/ubuntu/pgn68/. Copy the COMPLETE directory.
+The native build uses one compiler thread and does not modify GPU settings.
+
+SOURCE EXECUTION
+----------------
+After the native build:
   python frontend/pgn68.py --idle
-Linux also set LD_LIBRARY_PATH to the absolute frontend/lib directory.
-The CLI and parameters match the bundled program. Use --help.
+Use --help for the complete public CLI. Results are local. Keep the workers,
+metadata and runtime directories together. Preserve compatible historical worker
+images when resuming a checkpoint pinned to their exact executable hash.
 
-The build hashes the exact native inputs and worker images into .module.json
-sidecars. Changing source creates a new fingerprint. Preserve bin/compat from
-an installed release for checkpoints pinned to older worker images.
+INDEPENDENT DIAGNOSTIC FIXTURES
+-----------------------------
+  python native/generate_diagnostic.py --check
+This verifies274 fixed Euler/Jacobi cases using Python integer pow, without CUDA,
+a compiler or a historical workspace archive. The optional write mode regenerates
+the checked-in constants. Third-party reference acknowledgments remain intact.

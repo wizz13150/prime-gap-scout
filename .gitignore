@@ -13,3 +13,8 @@ venv/
 *.partial
 .DS_Store
 Thumbs.db
+
+# Portable programs/runtime libraries are distributed as release assets.
+Source/frontend/bin/
+Source/frontend/lib/
+Source/build/

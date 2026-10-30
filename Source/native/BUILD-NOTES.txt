@@ -26,7 +26,7 @@ with visible models/UUIDs/CC/VRAM/mapped-host/shared/runtime/driver properties.
 --self-test and --fermat-diagnostic [--output-directory DIR] use the exact API
 int pgn_release_diagnostic(int device,const char* output_directory,bool benchmark)
 after cudaSetDeviceFlags(MapHost) and mono-device/CC checks, BEFORE search malloc.
-release-selftest.cuh is owned by another source author; optional __has_include
+worker_diagnostics.cuh is owned by another source author; optional __has_include
 allows this checkpoint to compile without it. Absent implementation fails closed,
 and capabilities.self_test_compiled is false. Root final releases require it.
 

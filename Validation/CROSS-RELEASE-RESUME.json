@@ -1,0 +1,25 @@
+{
+  "PASS": true,
+  "actual_frozen_console": true,
+  "actual_Win32_mouse_and_keyboard_records": true,
+  "physical_human_mouse": false,
+  "all_actions_target_own_frozen_app_only": true,
+  "original_worker_sha256": "0393B34CAB0ACAB0851C8E35F6C6DCCE551C131AC732500718C9D82E2179E3D3",
+  "positions_before": 515396075500,
+  "positions_after": 773094113260,
+  "same_session": true,
+  "compatible_worker_preserved": true,
+  "all_native_owners_closed": true,
+  "new_exe_sha256": "1B6AAA9C35F6922EFA063BE7A0D190F9AE9D0E02C357A5372B272686E9793340",
+  "events": [
+    "click menu [M]",
+    "click Search ranges",
+    "click New [N]",
+    "click Save range [Ctrl+S]",
+    "click Start [Enter]",
+    "click Pause [P]",
+    "click safe quit [Q]",
+    "click Resume [P]",
+    "click safe quit [Q]"
+  ]
+}

@@ -2,20 +2,20 @@ typedef unsigned int uint32_t;typedef unsigned long long uint64_t;typedef int in
 
 // Private numeric component gate SOURCE, never a Native miner or benchmark.
 
-// PRIVATE SOURCE integration only. NOT compiled/tested/Native qualified.
-// Same State8 and perpoint API as the retained M565/C29 wrapper.
+// Specialized modular arithmetic; admission and fallback are defined below.
+// Same State8 and perpoint API as the retained cached Euler arithmetic/streamed pair fold wrapper.
 
-// M583 private SOURCE. Not compiled, numerically tested, or Native qualified.
+// Specialized modular arithmetic; admission and fallback are defined below.
 // Real high64 word10 ONLY, exact old JobMu and a narrower <=2^36 job span.
-// Parent C25/C29 and all accepted images remain unmodified.
+// Fallbacks preserve the same exact modular representation.
 
-// Independent SOURCE control candidate after exact Native AOT C28.
-// No arithmetic primitive, C25 consumer, M564 tiny gate or Native kit changed.
+// Independent SOURCE control candidate after exact Native AOT assembly verification.
+// No arithmetic primitive, paired square consumer, small-number gate tiny gate or Native kit changed.
 
 
-// C20 experimental component. NO Native/GPU qualification.
+// Specialized modular arithmetic; admission and fallback are defined below.
 // N=10*2^64+nlo odd. A<2N. muL=floor(2^96/Nmax) for a job
-// whose actual query envelope obeys C19, hence 0<=2^96/N-muL<2.
+// whose actual query envelope obeys coefficient bound, hence 0<=2^96/N-muL<2.
 // R64 encoded residues, NOT the parent's ordinary/Barrett representation.
 namespace myr_r64lazy32 {
 struct Value { uint32_t x, y, z; };
@@ -300,8 +300,8 @@ B70_HD bool test(uint64_t low){
 #undef B70_UNROLL
 
 
-// C21 component SOURCE, no full-consumer compile/GPU/Native qualification.
-// C21 proof extends the UNCHANGED C20 implementation to input<256*N.
+// Specialized modular arithmetic; admission and fallback are defined below.
+// cached primality proof extends the UNCHANGED bounded raw square implementation to input<256*N.
 // Only the implicit-high10 parent domain is supported; not arbitrary 68bits.
 namespace myr_r64lazy32_prp {
 using myr_r64lazy32::Value;
@@ -352,7 +352,7 @@ C21_HD bool admits(const JobMu& job, uint64_t low) {
     return job.ready==Ready && low>=job.minLow && low<=job.maxLow;
 }
 
-// Canonical ADD/MAD columns for the HOST oracle only. Device uses C20 PTX.
+// Canonical ADD/MAD columns for the HOST oracle only. Device uses bounded raw square PTX.
 // No host code here constitutes CUDA compiler/device validation.
 #if !defined(__CUDA_ARCH__)
 C21_HD void hostAddProduct(uint32_t& l,uint32_t& m,uint32_t& h,
@@ -439,7 +439,7 @@ C21_HD Value shiftReduce(Value a,uint32_t bits,uint32_t n0,uint32_t n1,uint32_t 
 C21_HD bool equals(Value a,Value b) { return a.x==b.x && a.y==b.y && a.z==b.z; }
 
 // HD annotation is required for a real NVCC host/device consumer. The sealed
-// C20 helper is device-only under CUDACC; do not call it from the host variant.
+// bounded raw square helper is device-only under CUDACC; do not call it from the host variant.
 C21_HD uint32_t negativeInverse32(uint32_t n0) {
     uint32_t x=n0;
     x*=2u-n0*x;x*=2u-n0*x;x*=2u-n0*x;x*=2u-n0*x;
@@ -491,9 +491,9 @@ C21_HD bool testWithFallback(uint64_t low,const JobMu& job,bool* fellBack=nullpt
 } // namespace myr_r64lazy32_prp
 
 
-// C25 independent SOURCE. NOT compiled/tested/GPU/Native qualified.
-// Keep sealed C20/C21,36C5,C24/C24s and M553 unchanged.
-// Numerical domain/bucket/inverse/fallback are EXACTLY the existing C21 ones.
+// Specialized modular arithmetic; admission and fallback are defined below.
+// Fallbacks preserve the same exact modular representation.
+// Numerical domain/bucket/inverse/fallback are EXACTLY the existing cached primality ones.
 namespace myr_r64_pairfold {
 using Value=myr_r64lazy32::Value;
 using JobMu=myr_r64lazy32_prp::JobMu;
@@ -509,7 +509,7 @@ static_assert(sizeof(Folded)==12 && sizeof(Wide)==12,"No payload expansion");
 #endif
 
 // ONLY a Folded input is admitted. Raw output<45N, included in Wide.
-// This is the SAME C20 column arithmetic through the exact raw t words,
+// This is the SAME bounded raw square column arithmetic through the exact raw t words,
 // with NO final quotient/p*N/subtract. All third-word carries are retained.
 C25_HD Wide rawSquare(Folded input,uint32_t n0,uint32_t n1,uint32_t np32) {
     const Value a=input.v;Value t;
@@ -587,12 +587,12 @@ C25_HD Wide rawSquare(Folded input,uint32_t n0,uint32_t n1,uint32_t np32) {
     return {t};
 }
 
-// Full square of ANY constructed Wide value: sealed C20/C21 implementation.
+// Full square of ANY constructed Wide value: sealed bounded raw square/cached primality implementation.
 C25_HD Folded squareAndFold(Wide a,uint32_t n0,uint32_t n1,uint32_t np,uint32_t mu) {
     return {myr_r64lazy32_prp::squareAfterW3(a.v,n0,n1,np,mu)};
 }
 
-// Caller must use the SAME C21 cold JobMu builder/admission. No new metadata.
+// Caller must use the SAME cached primality cold JobMu builder/admission. No new metadata.
 // This changes temporary residue representatives, NOT the final Euler oracle.
 C25_HD bool testAdmitted(uint64_t low,const JobMu& job) {
     if (!(low&1)) return false;
@@ -647,8 +647,8 @@ using JobMu=myr_r64_pairfold::JobMu;
 using Folded=myr_r64_pairfold::Folded;
 using Wide=myr_r64_pairfold::Wide;
 
-// SAME admission as C25: odd low, real H10 JobMu, exact prepaid muLower.
-// The arithmetic producer/RAW/FOLD bodies are the sealed C25/C21 ones.
+// SAME admission as paired square: odd low, real H10 JobMu, exact prepaid muLower.
+// The arithmetic producer/RAW/FOLD bodies are the sealed paired square/cached primality ones.
 C29_HD bool testAdmitted(uint64_t low,const JobMu& job) {
     if(!(low&1))return false;
     const uint32_t n0=uint32_t(low),n1=uint32_t(low>>32),mu=job.muLower;
@@ -708,8 +708,8 @@ C29_HD bool testWithFallback(uint64_t low,const JobMu& job,bool* fellBack=nullpt
 namespace m600_fourbit_orbit96 {
 using Value=myr_r64lazy32::Value;
 using JobMu=myr_r64lazy32_prp::JobMu;
-// Internal contract: 0<=a<45N, N=10*2^64+low. Exact same raw columns as C25.
-// No call is made through C25's narrower Folded<2N interface.
+// Internal contract: 0<=a<45N, N=10*2^64+low. Exact same raw columns as paired square.
+// No call is made through paired square's narrower Folded<2N interface.
 M600_HD Value rawSquare45(Value a,uint32_t n0,uint32_t n1,uint32_t np32) {
     Value t;
 #if defined(__CUDA_ARCH__)
@@ -849,7 +849,7 @@ M600_HD bool admits(const JobMu& job,uint64_t low) {
            job.maxLow-job.minLow<=(uint64_t(1)<<36);
 }
 
-// PRECONDITION: same exact C21 ready JobMu, actual H10, plus the narrow span.
+// PRECONDITION: same exact cached primality ready JobMu, actual H10, plus the narrow span.
 // This is not an unchecked arbitrary-high or arbitrary-mu entry point.
 M600_HD bool testAdmitted(uint64_t low,const JobMu& job) {
     if(!(low&1))return false;
@@ -889,8 +889,8 @@ M600_HD bool testAdmitted(uint64_t low,const JobMu& job) {
            myr_r64lazy32_prp::equals(a,Value{n0,n1,11});
 }
 
-// A wide/unready envelope uses the retained C29 path, not a truncated span.
-// fellBack means this private candidate was not used; C29 keeps its own guard.
+// A wide/unready envelope uses the retained streamed pair fold path, not a truncated span.
+// fellBack means this private candidate was not used; streamed pair fold keeps its own guard.
 M600_HD bool testWithFallback(uint64_t low,const JobMu& job,bool* fellBack=nullptr) {
     if(!m600_fourbit_orbit96::admits(job,low)) {
         if(fellBack)*fellBack=true;
@@ -922,9 +922,9 @@ M586_HD bool test(uint64_t low,State& state){
             return pgn_barrett70::test(low);
         state.bucketTag=tag;state.muLower=built.muLower;
     }
-    // The exact C21 builder was run for THIS complete2^36 bucket. Reversed,
+    // The exact cached primality builder was run for THIS complete2^36 bucket. Reversed,
     // halo and repair queries are admitted by tag, never clipped/dropped.
-    // Keep real bounds in JobMu to make M583's <=2^36 proof contract explicit.
+    // Keep real bounds in JobMu to make narrow-domain cache's <=2^36 proof contract explicit.
     // testAdmitted reads only muLower; compiler/register consequences unpaid.
     const myr_r64lazy32_prp::JobMu hot{first,last,state.muLower,myr_r64lazy32_prp::Ready};
     return m600_fourbit_orbit96::testAdmitted(low,hot);

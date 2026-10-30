@@ -1,9 +1,0 @@
-{
-  "beforeSHA": "6A57C3B1011FFC3720865C46A16AF5A84E45F4A4B4B4E13705A415AC008F20EE",
-  "afterSHA": "1E46D1147E7D1116C7CD7915C1CFE783A90BC61DFAC83CA5D237CB52CCAE304E",
-  "schema": "pgn-memory-plan-1",
-  "gap_runtime_schema": "PGN_NATIVE_GAP_RUNTIME_V1",
-  "actual_echo": "same parsed gapMin fedtoactualGapMin/windowSteps/buffers, not display-only",
-  "CP_magic": "PGNS+little-endianuint32gap,64Btotal",
-  "compile_unpaid": true
-}

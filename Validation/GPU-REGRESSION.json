@@ -1,0 +1,242 @@
+{
+  "science_PASS": true,
+  "no_CUDA_errors": true,
+  "owned_closed": true,
+  "fan_restored": true,
+  "scope": "2T cleaned-pipeline regression paired against retained binaries; results/counters exact, not new graphrecords or complete UI qualification",
+  "performance_below_minus_2_percent": [],
+  "rows": [
+    {
+      "bits": 67,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 1008.231015012634,
+      "assembled_GPU_Gpos_s": 1007.7202171393603,
+      "paired_percent": -0.050662781214605435
+    },
+    {
+      "bits": 68,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 970.252958748194,
+      "assembled_GPU_Gpos_s": 970.0939410742801,
+      "paired_percent": -0.016389300592201117
+    },
+    {
+      "bits": 69,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 949.3927977739858,
+      "assembled_GPU_Gpos_s": 952.3471835103211,
+      "paired_percent": 0.31118687052003047
+    },
+    {
+      "bits": 70,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 936.1982919023781,
+      "assembled_GPU_Gpos_s": 936.5915407422931,
+      "paired_percent": 0.04200486620371535
+    },
+    {
+      "bits": 71,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 915.8241150061078,
+      "assembled_GPU_Gpos_s": 916.2989128468923,
+      "paired_percent": 0.0518437801543703
+    },
+    {
+      "bits": 72,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 907.0796948836074,
+      "assembled_GPU_Gpos_s": 917.9158871971644,
+      "paired_percent": 1.1946240638698757
+    },
+    {
+      "bits": 73,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 888.3720214122069,
+      "assembled_GPU_Gpos_s": 888.6512982878664,
+      "paired_percent": 0.03143692832825451
+    },
+    {
+      "bits": 74,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 863.8698459411748,
+      "assembled_GPU_Gpos_s": 874.6954928047745,
+      "paired_percent": 1.2531571641796635
+    },
+    {
+      "bits": 75,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 850.2861204717669,
+      "assembled_GPU_Gpos_s": 849.024181782788,
+      "paired_percent": -0.1484134173892926
+    },
+    {
+      "bits": 76,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 832.0085216575851,
+      "assembled_GPU_Gpos_s": 831.3876441044774,
+      "paired_percent": -0.0746239415758243
+    },
+    {
+      "bits": 77,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 811.4488779552897,
+      "assembled_GPU_Gpos_s": 816.6757368239294,
+      "paired_percent": 0.6441390222647669
+    },
+    {
+      "bits": 78,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 794.5630627180776,
+      "assembled_GPU_Gpos_s": 803.8778469250547,
+      "paired_percent": 1.172315281698677
+    },
+    {
+      "bits": 79,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 782.3478188806828,
+      "assembled_GPU_Gpos_s": 789.8540015104575,
+      "paired_percent": 0.9594431592477415
+    },
+    {
+      "bits": 80,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 759.3219936619613,
+      "assembled_GPU_Gpos_s": 769.0927605635694,
+      "paired_percent": 1.2867751735317068
+    },
+    {
+      "bits": 81,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 749.1403220569301,
+      "assembled_GPU_Gpos_s": 747.8251724963924,
+      "paired_percent": -0.1755545018490956
+    },
+    {
+      "bits": 82,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 741.0127107936952,
+      "assembled_GPU_Gpos_s": 739.201806356112,
+      "paired_percent": -0.24438237174684296
+    },
+    {
+      "bits": 83,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 713.2262106364464,
+      "assembled_GPU_Gpos_s": 713.9914343011679,
+      "paired_percent": 0.10729045754485078
+    },
+    {
+      "bits": 84,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 703.1271993873728,
+      "assembled_GPU_Gpos_s": 703.7618701566099,
+      "paired_percent": 0.09026400483298502
+    },
+    {
+      "bits": 85,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 700.5085612296551,
+      "assembled_GPU_Gpos_s": 706.0295978226092,
+      "paired_percent": 0.7881469119039197
+    },
+    {
+      "bits": 86,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 697.0029722189709,
+      "assembled_GPU_Gpos_s": 696.7056335428024,
+      "paired_percent": -0.042659599459360376
+    },
+    {
+      "bits": 87,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 692.1360685178025,
+      "assembled_GPU_Gpos_s": 682.9805532515662,
+      "paired_percent": -1.3227912375441853
+    },
+    {
+      "bits": 88,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 659.700034631745,
+      "assembled_GPU_Gpos_s": 660.6407924344024,
+      "paired_percent": 0.14260387346842762
+    },
+    {
+      "bits": 89,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 658.2523608025912,
+      "assembled_GPU_Gpos_s": 650.6857339449753,
+      "paired_percent": -1.149502426150073
+    },
+    {
+      "bits": 90,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 646.8877883388384,
+      "assembled_GPU_Gpos_s": 645.7740778438998,
+      "paired_percent": -0.17216440239171682
+    },
+    {
+      "bits": 91,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 640.1704953276796,
+      "assembled_GPU_Gpos_s": 640.2968375159726,
+      "paired_percent": 0.019735709348522867
+    },
+    {
+      "bits": 92,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 639.4534672042724,
+      "assembled_GPU_Gpos_s": 633.7748946540955,
+      "paired_percent": -0.8880353053684953
+    },
+    {
+      "bits": 93,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 629.8172330789077,
+      "assembled_GPU_Gpos_s": 630.3878655943804,
+      "paired_percent": 0.09060287421527313
+    },
+    {
+      "bits": 94,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 590.1817445826134,
+      "assembled_GPU_Gpos_s": 590.868073304022,
+      "paired_percent": 0.11629107943587069
+    },
+    {
+      "bits": 95,
+      "same_results_and_counters": true,
+      "positions": 2000000000000,
+      "parent_GPU_Gpos_s": 562.3220606346795,
+      "assembled_GPU_Gpos_s": 564.3247167783054,
+      "paired_percent": 0.3561404191337658
+    }
+  ]
+}

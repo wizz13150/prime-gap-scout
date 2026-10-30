@@ -1,0 +1,48 @@
+{
+  "release": "1.3.0",
+  "publication": "LOCAL_OPERATOR_VALIDATION_ONLY",
+  "supported_bits": [
+    67,
+    95
+  ],
+  "engines": 29,
+  "hardware_execution": {
+    "Windows_sm86": "RTX3090 actual GPU searches, console workflows and diagnostics",
+    "Windows_sm120": "Compiled; physical GPU not available in this qualification",
+    "Ubuntu_sm86_sm120": "Compiled, ELF loading and actual frozen PTY menu/form/navigation; physical Linux CUDA execution not qualified"
+  },
+  "checks": {
+    "independent_host_arithmetic": 22272,
+    "forms_and_policy_widths": 29,
+    "diagnostic_independent_gold_cases": 274,
+    "paired_GPU_widths": 29,
+    "paired_GPU_positions_each_role": 2000000000000,
+    "paired_GPU_percent_range": [
+      -1.3227912375441853,
+      1.2867751735317068
+    ],
+    "same_gap_sets_and_counters": true,
+    "Windows_real_frozen_console_mouse_keyboard": true,
+    "physical_human_mouse_used": false,
+    "pause_resume_verified_actual_new_progress": true,
+    "range_switch_original_suspended": true,
+    "clean_and_abrupt_reopen": true,
+    "diagnostic_zip_validated": true,
+    "clock_display_without_CSV": true,
+    "clock_display_during_developer_recording": true,
+    "prior_release_checkpoint_resume": true,
+    "prior_release_positions": [
+      515396075500,
+      773094113260
+    ],
+    "preserved_prior_worker_image": "0393B34CAB0ACAB0851C8E35F6C6DCCE551C131AC732500718C9D82E2179E3D3",
+    "actual_95bit_search_positions": 2000000000000,
+    "actual_95bit_automatic_gap": 1332,
+    "actual_debug_and_telemetry_files": true,
+    "actual_public_reference_Fermat_diagnostic": true
+  },
+  "numeric_contract": "Reported endpoints proved; interiors have compositeness witnesses. Finite corpus checks are not a new exhaustive interval-coverage proof.",
+  "platform_boundary_observed": "A deliberately non-breakaway external test Job prevented independent owner creation before GPU work. The test with the application-required breakaway permission and the direct console launch both passed.",
+  "no_hardware_tuning_by_application": true,
+  "no_automatic_uploads": true
+}

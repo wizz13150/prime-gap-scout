@@ -1,4 +1,4 @@
-PGN 68 — third-party attribution and accompanying texts
+Prime Gap Scout — third-party attribution and accompanying texts
 ======================================================
 
 Prime-gap and arithmetic source attribution
@@ -7,8 +7,8 @@ Original CUDA prime-gap work: Brian Kehrig.
 Original CIOS arithmetic acknowledged by that project: Périg.
 Public repository: https://github.com/briankehrig/prime-gaps-cuda
 Public arithmetic comparison source: commit 9d41f2709666d240c073439c37722c6ff6cb5b44.
-PGN optimized search basis: M600, qualified 68-bit H10 implementation.
-Console helpers/layout basis: Horizon RC7 CPU dashboard.
+Optimized modular arithmetic and CUDA search specializations are included for67–95 bits.
+Terminal layout and interaction components originate from the Horizon interface.
 
 This notice records attribution. It does not invent an SPDX identifier or
 an upstream licence grant for Brian Kehrig's/Périg's public source. Preserve
@@ -18,14 +18,13 @@ Bundled software components
 ---------------------------
 The application is frozen with Python and PyInstaller. Its Rich console uses
 Rich and its included Python dependencies, including Markdown-it-py, mdurl
-and Pygments. The actual frozen Windows distribution also contains NumPy
-and its numerical-runtime libraries. Existing package dist-info licence
-files are preserved in _internal where collected by the freezer.
+and Pygments. Package dist-info licence files are preserved in _internal where collected
+by the freezer. No unused numerical Python dependency is required.
 
 NVIDIA CUDA Runtime components are supplied for the corresponding workers.
-They retain NVIDIA's own licence and redistribution terms. The optional NVRTC
-fallback uses a separately installed CUDA Toolkit and reports unavailability
-when absent; NVRTC is not bundled. No NVIDIA driver is included; the compatible
+They retain NVIDIA's own licence and redistribution terms. The optional Windows reference-comparison diagnostic uses the bundled
+CUDA12.8 NVRTC and matching builtins pair when supplied by the build Toolkit;
+it reports unavailability when that optional pair is absent. No NVIDIA driver is included; the compatible
 installed driver is used.
 
 The Ubuntu package also bundles libstdc++.so.6 and libgcc_s.so.1. The exact
@@ -50,3 +49,17 @@ terms or relicense any third-party component. Components provided solely
 by the operating system or installed driver are not represented as PGN code.
 
 No diagnostic or report is automatically uploaded by this application.
+
+Exact endpoint proof runtime
+---------------------------
+Shared FLINT, GMP and MPFR libraries are supplied from the explicitly selected
+python-flint0.7.1 wheels. The Python extension itself is not required by the
+application. FLINT uses LGPL terms; preserve the exact accompanying wheel license
+texts under THIRD-PARTY-LICENSES/proof-runtime and the runtime manifest fingerprints.
+Sources and upstream licensing information:
+  https://github.com/flintlib/flint
+  https://github.com/flintlib/python-flint
+  https://gmplib.org/
+  https://www.mpfr.org/
+Library and wheel SHA-256 values are recorded in frontend/lib/proof/<platform>/manifest.json.
+The application calls the proved fmpz_is_prime predicate, not probable-prime acceptance.

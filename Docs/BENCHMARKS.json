@@ -1,0 +1,241 @@
+{
+  "metric": "WHOLE_ACTIVE_GPU_GRAPH_POSITIONS_PER_SECOND",
+  "scope": "Retained optimized GPU benchmark measurements; entire finite CUDA graph including sieve, walk and verification; initialization/pause excluded; no frequency normalization",
+  "GPU": "NVIDIA GeForce RTX3090",
+  "core_MHz": 1500,
+  "memory_MHz": 5001,
+  "rows": [
+    {
+      "bits": 67,
+      "minimum_gap": 954,
+      "start": "100000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 23319.054688,
+      "GPU_Gpos_s": 1029.2012399778116
+    },
+    {
+      "bits": 68,
+      "minimum_gap": 960,
+      "start": "200000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 23915.728516,
+      "GPU_Gpos_s": 1003.5236845887266
+    },
+    {
+      "bits": 69,
+      "minimum_gap": 982,
+      "start": "400000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 24384.392578,
+      "GPU_Gpos_s": 984.2361224799668
+    },
+    {
+      "bits": 70,
+      "minimum_gap": 994,
+      "start": "800000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 25198.869141,
+      "GPU_Gpos_s": 952.4236927343152
+    },
+    {
+      "bits": 71,
+      "minimum_gap": 1008,
+      "start": "1500000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 25491.683594,
+      "GPU_Gpos_s": 941.4835199684065
+    },
+    {
+      "bits": 72,
+      "minimum_gap": 1022,
+      "start": "3000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 26038.896484,
+      "GPU_Gpos_s": 921.6980456428777
+    },
+    {
+      "bits": 73,
+      "minimum_gap": 1036,
+      "start": "6000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 26289.888672,
+      "GPU_Gpos_s": 912.8985025167169
+    },
+    {
+      "bits": 74,
+      "minimum_gap": 1050,
+      "start": "10000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 26996.453125,
+      "GPU_Gpos_s": 889.0056737777473
+    },
+    {
+      "bits": 75,
+      "minimum_gap": 1062,
+      "start": "20000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 27387.730469,
+      "GPU_Gpos_s": 876.3048120093576
+    },
+    {
+      "bits": 76,
+      "minimum_gap": 1076,
+      "start": "40000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 28075.648438,
+      "GPU_Gpos_s": 854.8333283556982
+    },
+    {
+      "bits": 77,
+      "minimum_gap": 1090,
+      "start": "100000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 28836.664062,
+      "GPU_Gpos_s": 832.2738007558372
+    },
+    {
+      "bits": 78,
+      "minimum_gap": 1104,
+      "start": "300000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 29356.763672,
+      "GPU_Gpos_s": 817.5288076079995
+    },
+    {
+      "bits": 79,
+      "minimum_gap": 1116,
+      "start": "400000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 29834.658203,
+      "GPU_Gpos_s": 804.4335496220533
+    },
+    {
+      "bits": 80,
+      "minimum_gap": 1130,
+      "start": "1000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 30670.541016,
+      "GPU_Gpos_s": 782.5098353328636
+    },
+    {
+      "bits": 81,
+      "minimum_gap": 1144,
+      "start": "2000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 31599.423828,
+      "GPU_Gpos_s": 759.5075192077961
+    },
+    {
+      "bits": 82,
+      "minimum_gap": 1158,
+      "start": "3000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 31926.173828,
+      "GPU_Gpos_s": 751.7343020588155
+    },
+    {
+      "bits": 83,
+      "minimum_gap": 1170,
+      "start": "5000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 32844.164062,
+      "GPU_Gpos_s": 730.7234233361868
+    },
+    {
+      "bits": 84,
+      "minimum_gap": 1184,
+      "start": "10000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 33115.546875,
+      "GPU_Gpos_s": 724.7351248823368
+    },
+    {
+      "bits": 85,
+      "minimum_gap": 1198,
+      "start": "20000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 33436.882812,
+      "GPU_Gpos_s": 717.7702579196992
+    },
+    {
+      "bits": 86,
+      "minimum_gap": 1212,
+      "start": "40000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 33903.765625,
+      "GPU_Gpos_s": 707.885969524956
+    },
+    {
+      "bits": 87,
+      "minimum_gap": 1224,
+      "start": "80000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 34262.226562,
+      "GPU_Gpos_s": 700.4798697647465
+    },
+    {
+      "bits": 88,
+      "minimum_gap": 1238,
+      "start": "200000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 35478.238281,
+      "GPU_Gpos_s": 676.471018935936
+    },
+    {
+      "bits": 89,
+      "minimum_gap": 1252,
+      "start": "400000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 35936.121094,
+      "GPU_Gpos_s": 667.8517121317
+    },
+    {
+      "bits": 90,
+      "minimum_gap": 1266,
+      "start": "1000000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 36628.28125,
+      "GPU_Gpos_s": 655.2313999172429
+    },
+    {
+      "bits": 91,
+      "minimum_gap": 1278,
+      "start": "2000000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 37082.929688,
+      "GPU_Gpos_s": 647.1980558689886
+    },
+    {
+      "bits": 92,
+      "minimum_gap": 1292,
+      "start": "3000000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 37030.71875,
+      "GPU_Gpos_s": 648.1105636114611
+    },
+    {
+      "bits": 93,
+      "minimum_gap": 1306,
+      "start": "5000000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 37264.847656,
+      "GPU_Gpos_s": 644.0385915850047
+    },
+    {
+      "bits": 94,
+      "minimum_gap": 1318,
+      "start": "10000000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 39823.332031,
+      "GPU_Gpos_s": 602.6617757981046
+    },
+    {
+      "bits": 95,
+      "minimum_gap": 1332,
+      "start": "20000000000000000000000000000",
+      "positions": "24000000000000",
+      "GPU_active_ms": 41722.285156,
+      "GPU_Gpos_s": 575.2321549566085
+    }
+  ]
+}
