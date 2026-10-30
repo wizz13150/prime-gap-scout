@@ -1,22 +1,13 @@
-Prime Gap Scout 1.3.3
+Prime Gap Scout1.3.4
+Restores the familiar framed presentation and keeps Statistics as a third panel.
+Four metric cards, the device/range frame and framed progress totals are retained.
+The previously qualified complete-index statistics, checkpoint preview, Windows
+nested-process-host startup, CSV-lock continuation and compute-window ETA fixes
+remain included. CUDA engines and benchmark measurements are unchanged.
 
-Mining results
-- Best, Recent and Statistics are displayed together for the same search range.
-- Gap-size counts are cumulative; merit bands are disjoint. All merits at or
-  above the target share one final row.
-- Statistics use the complete committed range index, not just displayed results.
-- Consecutive empty merit bands are combined on screen. Replay, rollback and
-  reopening preserve the complete histogram.
-- statistics.csv exports the range counts alongside the existing reports.
-- Table spacing preserves exact lower-prime coordinates when the terminal fits.
-  A small terminal requests more room rather than silently hiding result rows.
-
-Windows process hosts
-- Scout can start inside a Windows process host that prohibits Job breakaway.
-  The enclosing host's limits remain in effect, and the suspended compute child
-  must enter Scout's own kill-on-close nested Job before execution.
-- Forced host termination closes the nested controller and child. A missing
-  completion receipt is never converted into a successful completed search.
-
-The CUDA engines, retained benchmark measurements and checkpoint compatibility
-images are unchanged. Scout remains an independent offline search application.
+Source:37 regressions including framed-dashboard protection.
+Actual frozen Windows:95-bit8T positions,20,793,232,629 tests,41 reported gaps,
+Start/Pause/Quit/reopen/Resume/complete, original frames and closed Native owners.
+The earlier1.3.3 full range-switch/abrupt-close/diagnostic/CSV-lock qualification
+is retained evidence for the unchanged workflow and ownership code.
+Ubuntu:real frozen ELF terminal navigation; physicalLinuxCUDA/sm120 not asserted.

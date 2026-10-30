@@ -206,7 +206,7 @@ def generate(parser, directory):
     cmd += [
         "",
         'set "PGN_R5_LAUNCHER=1"',
-        'if not "%HEADLESS%"=="1" mode con cols=132 lines=46 >nul 2>&1',
+        'if not "%HEADLESS%"=="1" mode con cols=150 lines=46 >nul 2>&1',
         '"%~dp0pgn68.exe"',
         'set "PGN_R5_EXIT=%ERRORLEVEL%"',
         'set "PGN_R5_LAUNCHER="',

@@ -172,13 +172,11 @@ def _gap_table(rows, limit=10, compact=False, target=32.0, recent=False, best_lo
         expand=True,
         header_style="bold cyan",
         border_style=MUTED,
-        padding=0,
+        padding=(0, 1),
         show_edge=False,
     )
-    table.add_column("GAP", justify="right", min_width=4, no_wrap=True)
-    table.add_column("", width=1)
+    table.add_column("GAP", justify="right", min_width=5, no_wrap=True)
     table.add_column("MERIT", justify="right", min_width=7, no_wrap=True)
-    table.add_column("", width=1)
     table.add_column("LOWER_PRIME", min_width=21, ratio=2, no_wrap=True)
     for index in range(limit):
         if index < len(rows):
@@ -190,13 +188,13 @@ def _gap_table(rows, limit=10, compact=False, target=32.0, recent=False, best_lo
             row_style = merit_style(merit, target) if medal else base_style
             merit_color = row_style
             table.add_row(
-                Text(str(gap), style=row_style), "",
-                Text("—" if merit is None else f"{merit:.4f}", style=merit_color), "",
+                Text(str(gap), style=row_style),
+                Text("—" if merit is None else f"{merit:.4f}", style=merit_color),
                 Text(str(lower), style=row_style),
                 style=row_style,
             )
         else:
-            table.add_row("—", "", "—", "", "—", style=MUTED)
+            table.add_row("—", "—", "—", style=MUTED)
     return table
 
 
@@ -294,18 +292,6 @@ def render(state, width=110, height=30):
         metrics.add_column(ratio=1)
     for i in range(0, 4, columns):
         metrics.add_row(*cards[i : i + columns])
-    if height < 36 and width >= 104:
-        # Short terminals keep the measurements on one line, leaving room for
-        # complete range statistics rather than replacing the screen mid-run.
-        card_height = 1
-        metrics = Table.grid(expand=True, padding=(0, 1))
-        for _ in range(4):
-            metrics.add_column(ratio=1, no_wrap=True)
-        average_label = "Avg 60s" if average_mature else f"Avg {span:.0f}s"
-        metrics.add_row(Text("Speed " + _speed(rate), style="cyan"),
-                        Text(average_label + " " + _speed(average), style="cyan"),
-                        Text("Tests/s " + ("—" if tests_rate is None else compact_number(tests_rate)), style="cyan"),
-                        Text("ETA " + _duration(eta), style="cyan"))
     device = safe(state.get("gpu_name", "Waiting for GPU…"))
     index = safe(state.get("gpu_index", 0))
     host = safe(state.get("host", "local"))
@@ -412,14 +398,13 @@ def render(state, width=110, height=30):
             details.add_row(Text(label + "  " + text, no_wrap=True, overflow="ellipsis"))
         device_height = 9
     current_prefix = "At " + exact(current) + "  " if tight else ""
-    progress_label = f"{compact_number(completed)} / {sci(total)} pos · {compact_number(tests)} tests · {proportion*100:.2f}%"
-    bar_width = max(8, width - 6 - len(current_prefix) - len(progress_label))
+    bar_width = max(8, width - 16 - len(current_prefix))
     done = int(proportion * bar_width)
     bar = Text.assemble(
         (current_prefix, "white"),
         ("━" * done, "bold cyan"),
         ("━" * (bar_width - done), MUTED),
-        ("  " + progress_label, "bold white"),
+        (f"  {proportion*100:6.2f}%", "bold white"),
     )
     device_title = (
         "DEVICE & RANGE  ·  end exclusive"
@@ -435,17 +420,6 @@ def render(state, width=110, height=30):
         box=box.ROUNDED,
         padding=(0, 1),
     )
-    if height < 36 and width >= 104:
-        compact_details = Table.grid(expand=True, padding=(0, 1))
-        compact_details.add_column(ratio=1, no_wrap=True)
-        compact_details.add_column(ratio=1, no_wrap=True)
-        compact_details.add_row(Text("GPU " + index + "  " + device, overflow="ellipsis"),
-                                Text(target_label + " · " + threshold_info["actual_label"], overflow="ellipsis"))
-        compact_details.add_row(Text("CUDA " + arch + "  " + driver_label, overflow="ellipsis"),
-                                Text("VRAM " + memory_text + "  Core " + clock(core) + " / Mem " + clock(mem), overflow="ellipsis"))
-        compact_details.add_row(Text("Start " + exact(start)), Text("End (excl.) " + exact(end)))
-        device_panel = Group(compact_details, bar)
-        device_height = 4
     records = []
     for row in state.get("gaps", ()) or ():
         try:
@@ -476,10 +450,12 @@ def render(state, width=110, height=30):
     if not statistics:
         stats_table.add_row(str(state.get("statistics_notice", "Statistics unavailable")), "—")
     footer_height = 3
+    counter_height = 3
     fixed = (
         header_height
         + card_height * (4 // columns)
         + device_height
+        + counter_height
         + footer_height
     )
     from pgn_ui_options import display_rows
@@ -487,7 +463,7 @@ def render(state, width=110, height=30):
     result_limit = display_rows(state.get("display_rows", 10))
     # Keep exact prime coordinates legible. Narrow terminals stack the panels;
     # they never silently shorten scientific results to an ambiguous prefix.
-    three_column_width = 2 * (len(str(end or start or 10**20)) + 15) + 28
+    three_column_width = 2 * (len(str(end or start or 10**20)) + 24) + 36
     side_by_side = width >= three_column_width
     table_min = result_limit + (3 if tight else 5)
     stats_min = len(stat_rows) + 2 if stat_rows else 3
@@ -498,19 +474,19 @@ def render(state, width=110, height=30):
     latest = list(reversed(display_records[-result_limit:]))
     goal_label = f"{target_merit:g}"
     best_panel = Panel(
-        _gap_table(best, limit=result_limit, compact=True, target=target_merit),
+        _gap_table(best, limit=result_limit, compact=tight, target=target_merit),
         height=panel_height,
         title="BEST " + str(result_limit) + "  ·  ≥" + str(threshold) + "  ·  target " + goal_label,
         title_align="left",
         border_style=MUTED,
         box=box.ROUNDED,
-        padding=0,
+        padding=(0, 1),
     )
     recent = Panel(
         _gap_table(
             latest,
             limit=result_limit,
-            compact=True,
+            compact=tight,
             target=target_merit,
             recent=True,
             best_lowers={r[2] for r in best},
@@ -520,14 +496,14 @@ def render(state, width=110, height=30):
         title_align="left",
         border_style=MUTED,
         box=box.ROUNDED,
-        padding=0,
+        padding=(0, 1),
     )
     if side_by_side:
-        results = Table.grid(expand=True, padding=0)
-        result_width = (width - 28) // 2
+        results = Table.grid(expand=True, padding=(0, 1))
+        result_width = (width - 36) // 2
         results.add_column(width=result_width)
-        results.add_column(width=width - 28 - result_width)
-        results.add_column(width=28)
+        results.add_column(width=width - 36 - result_width)
+        results.add_column(width=30)
         statistics_panel = Panel(stats_table, title="STATISTICS", height=panel_height,
             title_align="left", border_style=MUTED, box=box.ROUNDED, padding=(0, 0))
         results.add_row(best_panel, recent, statistics_panel)
@@ -535,6 +511,26 @@ def render(state, width=110, height=30):
         panel_height = table_min
         best_panel.height = recent.height = panel_height
         results = Group(best_panel, recent, Panel(stats_table, title="STATISTICS", height=stats_min))
+    counters = Table.grid(expand=True, padding=(0, 1))
+    counters.add_column(ratio=2)
+    counters.add_column(ratio=1)
+    gap_count = _int(state.get("gap_count"), len(records))
+    counters.add_row(
+        Text.assemble(
+            ("Positions ", "white"),
+            (compact_number(completed), "bold cyan"),
+            (" / " + sci(total), MUTED),
+        ),
+        Text.assemble(("Tests ", "white"), (compact_number(tests), "bold cyan")),
+    )
+    counts = Panel(
+        counters,
+        title="RANGE PROGRESS",
+        title_align="left",
+        border_style=MUTED,
+        box=box.ROUNDED,
+        padding=(0, 1),
+    )
     key_help = safe(state.get("key_help", "P Pause/resume | M Menu | Q Quit"))
     key_help = " | ".join(
         item for item in key_help.split(" | ") if not item.strip().upper().startswith("F ")
@@ -577,6 +573,7 @@ def render(state, width=110, height=30):
         Layout(metrics, size=card_height * (4 // columns)),
         Layout(device_panel, size=device_height),
         Layout(results, size=result_height),
+        Layout(counts, size=counter_height),
         Layout(footer, size=footer_height),
     )
     layout.pgn_hit_regions = button_regions

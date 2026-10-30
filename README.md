@@ -2,16 +2,18 @@
 
 Standalone CUDA prime-gap search for 67–95-bit integer ranges. Scout runs offline and does not contain a wallet, blockchain node or PGN networking.
 
-![Prime Gap Scout terminal interface](assets/terminal.png)
+![Prime Gap Scout framed terminal interface](assets/terminal.png)
+
+*Framed dashboard style; version1.3.4 adds Statistics beside Best and Recent.*
 
 ## Downloads
 
-**Stable release: [v1.3.3](https://github.com/wizz13150/prime-gap-scout/releases/tag/v1.3.3)**
+**Stable release: [v1.3.4](https://github.com/wizz13150/prime-gap-scout/releases/tag/v1.3.4)**
 
-- [Windows x64](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.3/PrimeGapScout-1.3.3-Windows-x64.zip)
-- [Ubuntu24.04 x64](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.3/PrimeGapScout-1.3.3-Ubuntu-x64.zip)
-- [Complete package with source](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.3/PrimeGapScout-1.3.3-Complete.zip)
-- [SHA-256 checksums](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.3/SHA256SUMS.txt)
+- [Windows x64](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.4/PrimeGapScout-1.3.4-Windows-x64.zip)
+- [Ubuntu24.04 x64](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.4/PrimeGapScout-1.3.4-Ubuntu-x64.zip)
+- [Complete package with source](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.4/PrimeGapScout-1.3.4-Complete.zip)
+- [SHA-256 checksums](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.4/SHA256SUMS.txt)
 
 ## Start
 
@@ -23,15 +25,12 @@ Launcher settings can be edited from the menu. Save and relaunch the launcher to
 
 Windows x64 and Ubuntu24.04 x64 binaries include the Python frontend runtime. CUDA workers are provided for NVIDIA compute capabilities8.6 and12.0. The selected range, worker identity and memory plan are checked before execution. Physical validation for this patch used an RTX3090; physical Linux CUDA and sm120 execution are not claimed as tested.
 
-## Version 1.3.3
+## Version 1.3.4
 
-- Three result panels: **Best**, **Recent** and **Statistics**, all scoped to the same range.
-- Complete cumulative gap-size counts and separate merit bands, with one target-or-above total.
-- Persistent statistics survive pause, resume, replay and conservative rollback; `statistics.csv` exports them.
-- Exact prime coordinates and explicit terminal-size handling; Best/Recent remain configurable from 10 to 30 rows.
-- Windows startup supports process hosts that forbid breakaway while preserving parent limits and owned-child cleanup.
-- Previous direct Start, Idle GPU/clock discovery, CSV-lock handling and computation-based ETA fixes are retained.
-- CUDA engines and published benchmark measurements are unchanged.
+- Keeps the original framed dashboard: four metric cards, device/range frame and bottom progress frame.
+- Adds **Statistics** beside **Best** and **Recent**, with complete cumulative gap counts and separate merit bands.
+- Retains the saved-checkpoint preview, Windows process-host startup, derived-export locking and computation-based ETA fixes.
+- CUDA engines, checkpoint compatibility images and published benchmark measurements are unchanged.
 
 ## Measured GPU throughput by bit width
 
@@ -88,6 +87,6 @@ Automatic integer minimum gaps are selected for the requested range. See `Docs/B
 
 ## Validation and source
 
-See `Docs/VALIDATION-1.3.3.json` for the sanitized test summary and `Docs/RELEASE-NOTES.txt` for this patch. Native Windows tests covered real CUDA calculations, range creation/switching, pause/reopen/resume, abrupt UI closure, locked-statistics continuation and an 8T-position 95-bit completion with full-index statistics parity. Ubuntu was tested through the real frozen ELF in a PTY; no Linux GPU compute result is asserted.
+See `Docs/VALIDATION-1.3.4.json` for the sanitized test summary and `Docs/RELEASE-NOTES.txt` for this patch. Native Windows tests covered real CUDA calculations, range creation/switching, pause/reopen/resume, abrupt UI closure, locked-statistics continuation and an 8T-position 95-bit completion with full-index statistics parity. Ubuntu was tested through the real frozen ELF in a PTY; no Linux GPU compute result is asserted.
 
 The complete package includes source, build instructions, tests and third-party notices. Public project: https://github.com/wizz13150/prime-gap-scout
