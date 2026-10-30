@@ -211,7 +211,9 @@ class Dashboard:
 
     def _render(self, width, height):
         state = dict(_raw_gpu(self._state))
-        state.update({k: v for k, v in self._state.items() if v is not None})
+        # Explicit unknown values override old/raw samples. In particular a
+        # new worker's missing compute rate cannot revive a lifetime average.
+        state.update(self._state)
         start = _integer(state.get("start"))
         end = _integer(state.get("end"))
         completed = max(0, _integer(state.get("position"), 0))
@@ -219,17 +221,10 @@ class Dashboard:
         tests = _integer(state.get("tests"), 0)
         total = end - start if start is not None and end is not None else 0
         current = start + completed if start is not None else None
-        measured_rate = _number(state.get("rate"))
-        if measured_rate is None and elapsed > 0:
-            measured_rate = completed / elapsed
+        measured_rate = _number(state.get("speed_rate")) if "speed_rate" in state else _number(state.get("rate"))
         fraction = min(1.0, max(0.0, completed / total)) if total > 0 else 0.0
-        eta = (
-            max(0, total - completed) / measured_rate
-            if measured_rate and measured_rate > 0 and total > 0
-            else None
-        )
-        if total > 0 and completed >= total:
-            eta = 0
+        from pgn_compute_eta import forecast_seconds
+        eta = forecast_seconds(state)
         records = []
         for record in state.get("gaps", ()) or ():
             try:

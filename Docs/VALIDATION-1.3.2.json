@@ -1,0 +1,17 @@
+{
+  "version": "1.3.2",
+  "Windows_frontend_sha256": "B640C2A6168C356BF6CAAA9BA25C155EB569B04EC1F22AD221685F85B766BBDA",
+  "Ubuntu_frontend_sha256": "ED72A13D0421DB862BD42F5B2E50CB4B54869F30F9CE44D5D82DD33DB21C829D",
+  "CUDA_engines_changed": false,
+  "validation": {
+    "startup_source_tests": 6,
+    "Windows_console": "Actual frozen console, read-only Idle GPU/clocks, mouse Start and repeated-key safety; real32T pause/reopen/resume and separate32T pause/resume complete; native owners closed",
+    "Windows_CSV_lock": "8T complete while exclusive derived CSV lock was held; progress128849018860 to2190433320940 under lock; final100-bin sum equals32 retained gaps",
+    "Windows_95": "2T positions,5198622089 tests,8 exact same reported gaps as retained reference",
+    "final_exact_Windows_binary": "Actual95-bit8T Start/Pause/safe-quit/reopen with different68-bit launcher defaults/Resume/complete; exact saved95preview and all native owners closed",
+    "Ubuntu": "Frozen ELF in actual PTY: Idle/menu/ranges/form/advanced/back/quit; owned process closed",
+    "physical_Linux_CUDA_tested": false,
+    "physical_sm120_tested": false
+  },
+  "not_network_acceptance": true
+}

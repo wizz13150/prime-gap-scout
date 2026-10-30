@@ -1,139 +1,155 @@
 {
+  "schema": "PGN_RELEASE_EXACT_INSTALLED_LICENSES_V1",
   "files": [
     {
-      "file": "final-linux-rich-15.0.0.dist-info-LICENSE",
-      "bytes": 1056,
-      "sha256": "DEED7C17A4318158190A3EA239CC879A5A50271CEBB98AE7025F48FBE58DCA15"
-    },
-    {
-      "file": "final-windows-numpy-2.3.5.dist-info-LICENSE.txt",
-      "bytes": 46841,
-      "sha256": "596B953E1DCBE829B32AE444387EFA15003FC6ABDECA8A2179F364A6364C286E"
-    },
-    {
-      "file": "final-windows-rich-15.0.0.dist-info-LICENSE",
-      "bytes": 1056,
-      "sha256": "DEED7C17A4318158190A3EA239CC879A5A50271CEBB98AE7025F48FBE58DCA15"
-    },
-    {
-      "file": "Markdown-it-py-LICENSE",
-      "bytes": 1078,
-      "sha256": "4A2260D6E2CD0F5A151A1E86DBFE7D3ED552B1E2BEABF9941C1BA5C49CBCE484"
-    },
-    {
-      "file": "Markdown-it-py-LICENSE.markdown-it",
-      "bytes": 1073,
-      "sha256": "792C48C5A849A15FDF9E37E8BCF9E6D1DD13B32B46C642A748A0A46A9919D473"
-    },
-    {
-      "file": "mdurl-LICENSE",
-      "bytes": 2338,
-      "sha256": "7C605DF6E28667A9603118E98274F64A49CE3EED0D26FCCCE9534A345E0EF955"
-    },
-    {
-      "file": "NVIDIA-CUDA-Runtime-12.8.90-License.txt",
-      "bytes": 59262,
-      "sha256": "AD6F5853FBA0CA0D159D0F58D49AE49830C2F8C93F7A92648B9CE90ADB4C6CCD"
-    },
-    {
-      "file": "NVIDIA-NVRTC-12.8.93-License.txt",
-      "bytes": 59262,
-      "sha256": "AD6F5853FBA0CA0D159D0F58D49AE49830C2F8C93F7A92648B9CE90ADB4C6CCD"
-    },
-    {
-      "file": "proof-runtime/linux/python_flint-0.7.1.dist-info/LICENSE",
-      "bytes": 24642,
-      "sha256": "92876EC27338B1D0D994EAA85D7837B916671C871E37D56E4676CAF7CB134843"
-    },
-    {
-      "file": "proof-runtime/windows/python_flint-0.7.1.dist-info/LICENSE",
-      "bytes": 28397,
-      "sha256": "489707F58E1E11B9C8B59A434272B6C7ACF75FDB380D3BE95A3F72C5291FB79C"
-    },
-    {
-      "file": "Pygments-AUTHORS",
-      "bytes": 11048,
-      "sha256": "71A83872AD82F57BE692CF827E048E2CD51D45169CFA1EA3F28706D97A872C0F"
-    },
-    {
-      "file": "Pygments-LICENSE",
-      "bytes": 1331,
-      "sha256": "A9D66F1D526DF02E29DCE73436D34E56E8632F46C275BBDFFC70569E882F9F17"
-    },
-    {
-      "file": "PyInstaller-COPYING.txt",
-      "bytes": 32604,
-      "sha256": "0598064C7D2718E38D7914A7D08343B2FA008E3BEA9EBBA2AA7A6FFA5900DD64"
-    },
-    {
+      "component": "Python-Windows",
       "file": "Python-Windows-LICENSE.txt",
-      "bytes": 25066,
-      "sha256": "886A0EAD2D89030EE62DBFF52B04E47AB91998341295BB9C56FB952B4E081C7A"
+      "sha256": "886A0EAD2D89030EE62DBFF52B04E47AB91998341295BB9C56FB952B4E081C7A",
+      "bytes": 25066
     },
     {
+      "component": "NVIDIA-CUDA-Runtime-12.8.90",
+      "file": "NVIDIA-CUDA-Runtime-12.8.90-License.txt",
+      "sha256": "AD6F5853FBA0CA0D159D0F58D49AE49830C2F8C93F7A92648B9CE90ADB4C6CCD",
+      "bytes": 59262
+    },
+    {
+      "component": "NVIDIA-NVRTC-12.8.93",
+      "file": "NVIDIA-NVRTC-12.8.93-License.txt",
+      "sha256": "AD6F5853FBA0CA0D159D0F58D49AE49830C2F8C93F7A92648B9CE90ADB4C6CCD",
+      "bytes": 59262
+    },
+    {
+      "component": "Rich",
       "file": "Rich-LICENSE",
-      "bytes": 1056,
-      "sha256": "DEED7C17A4318158190A3EA239CC879A5A50271CEBB98AE7025F48FBE58DCA15"
+      "sha256": "DEED7C17A4318158190A3EA239CC879A5A50271CEBB98AE7025F48FBE58DCA15",
+      "bytes": 1056
     },
     {
-      "file": "Ubuntu-gcc-13-base-copyright.txt",
-      "bytes": 69100,
-      "sha256": "08C6F3DEE4C19AA1E57EB7D4AD45829B2E99656313BD07FA0922E2553F500BE5"
+      "component": "Pygments",
+      "file": "Pygments-AUTHORS",
+      "sha256": "71A83872AD82F57BE692CF827E048E2CD51D45169CFA1EA3F28706D97A872C0F",
+      "bytes": 11048
     },
     {
-      "file": "Ubuntu-libbz2-1.0-copyright.txt",
-      "bytes": 2228,
-      "sha256": "832ED535FF3C3D025A8D2348EB1B697B89ADDCF2EAADBC17650262040B9145E2"
+      "component": "Pygments",
+      "file": "Pygments-LICENSE",
+      "sha256": "A9D66F1D526DF02E29DCE73436D34E56E8632F46C275BBDFFC70569E882F9F17",
+      "bytes": 1331
     },
     {
-      "file": "Ubuntu-libexpat1-copyright.txt",
-      "bytes": 1756,
-      "sha256": "60919FE1A156395FF14511BB6FF79756C50ADE2FFF59AC60C9BAE1D8A7FE6292"
+      "component": "Markdown-it-py",
+      "file": "Markdown-it-py-LICENSE",
+      "sha256": "4A2260D6E2CD0F5A151A1E86DBFE7D3ED552B1E2BEABF9941C1BA5C49CBCE484",
+      "bytes": 1078
     },
     {
-      "file": "Ubuntu-libffi8-copyright.txt",
-      "bytes": 10165,
-      "sha256": "737FF68F0EB104D3B0D96B291C3A8F40A775A3EC2B53F9B2E4BCFE3188BDE118"
+      "component": "Markdown-it-py",
+      "file": "Markdown-it-py-LICENSE.markdown-it",
+      "sha256": "792C48C5A849A15FDF9E37E8BCF9E6D1DD13B32B46C642A748A0A46A9919D473",
+      "bytes": 1073
     },
     {
-      "file": "Ubuntu-liblzma5-copyright.txt",
-      "bytes": 15465,
-      "sha256": "A2DC8FAC0F496E1C58AFF67018CF0C6B88336316AFA5642F9335B71642E28AA8"
+      "component": "mdurl",
+      "file": "mdurl-LICENSE",
+      "sha256": "7C605DF6E28667A9603118E98274F64A49CE3EED0D26FCCCE9534A345E0EF955",
+      "bytes": 2338
     },
     {
-      "file": "Ubuntu-libreadline8t64-copyright.txt",
-      "bytes": 4314,
-      "sha256": "854C6F5F249A109A913E1E58528445C4FEC96F063AE8BA496BFB2B460BCC6866"
+      "component": "PyInstaller",
+      "file": "PyInstaller-COPYING.txt",
+      "sha256": "0598064C7D2718E38D7914A7D08343B2FA008E3BEA9EBBA2AA7A6FFA5900DD64",
+      "bytes": 32604
     },
     {
-      "file": "Ubuntu-libsqlite3-0-copyright.txt",
-      "bytes": 1833,
-      "sha256": "78E9DF8F8153C91C762EC970B82D224AC4D30F05AA7773E7E17E268141E53873"
+      "component": "final-windows-numpy-2.3.5.dist-info",
+      "file": "final-windows-numpy-2.3.5.dist-info-LICENSE.txt",
+      "sha256": "596B953E1DCBE829B32AE444387EFA15003FC6ABDECA8A2179F364A6364C286E",
+      "bytes": 46841
     },
     {
-      "file": "Ubuntu-libssl3t64-copyright.txt",
-      "bytes": 2543,
-      "sha256": "6A7DA622FE0637A334D2A8FC470852D2FFB77D9A2B2F930F854E32A41AD6EF35"
+      "component": "final-windows-rich-15.0.0.dist-info",
+      "file": "final-windows-rich-15.0.0.dist-info-LICENSE",
+      "sha256": "DEED7C17A4318158190A3EA239CC879A5A50271CEBB98AE7025F48FBE58DCA15",
+      "bytes": 1056
     },
     {
-      "file": "Ubuntu-libtinfo6-copyright.txt",
-      "bytes": 4670,
-      "sha256": "7C9D2C8DBEE48B6F4BBBFFB1F370CC5858DE11CC4F5A70C5C622C274917E1C65"
+      "component": "final-linux-rich-15.0.0.dist-info",
+      "file": "final-linux-rich-15.0.0.dist-info-LICENSE",
+      "sha256": "DEED7C17A4318158190A3EA239CC879A5A50271CEBB98AE7025F48FBE58DCA15",
+      "bytes": 1056
     },
     {
-      "file": "Ubuntu-libyaml-0-2-copyright.txt",
-      "bytes": 1639,
-      "sha256": "64609FA7E24F1DAA7C78A84E571D5C385350534EAD8830158E0744C64F0497B6"
-    },
-    {
+      "component": "Ubuntu-python3.12",
       "file": "Ubuntu-python3.12-copyright.txt",
-      "bytes": 49855,
-      "sha256": "F1CBF908E1DAA8789B389FDCF17811ED36B675D736B39A103591399861350382"
+      "sha256": "F1CBF908E1DAA8789B389FDCF17811ED36B675D736B39A103591399861350382",
+      "bytes": 49855
     },
     {
+      "component": "Ubuntu-libssl3t64",
+      "file": "Ubuntu-libssl3t64-copyright.txt",
+      "sha256": "6A7DA622FE0637A334D2A8FC470852D2FFB77D9A2B2F930F854E32A41AD6EF35",
+      "bytes": 2543
+    },
+    {
+      "component": "Ubuntu-libffi8",
+      "file": "Ubuntu-libffi8-copyright.txt",
+      "sha256": "737FF68F0EB104D3B0D96B291C3A8F40A775A3EC2B53F9B2E4BCFE3188BDE118",
+      "bytes": 10165
+    },
+    {
+      "component": "Ubuntu-libexpat1",
+      "file": "Ubuntu-libexpat1-copyright.txt",
+      "sha256": "60919FE1A156395FF14511BB6FF79756C50ADE2FFF59AC60C9BAE1D8A7FE6292",
+      "bytes": 1756
+    },
+    {
+      "component": "Ubuntu-liblzma5",
+      "file": "Ubuntu-liblzma5-copyright.txt",
+      "sha256": "A2DC8FAC0F496E1C58AFF67018CF0C6B88336316AFA5642F9335B71642E28AA8",
+      "bytes": 15465
+    },
+    {
+      "component": "Ubuntu-libbz2-1.0",
+      "file": "Ubuntu-libbz2-1.0-copyright.txt",
+      "sha256": "832ED535FF3C3D025A8D2348EB1B697B89ADDCF2EAADBC17650262040B9145E2",
+      "bytes": 2228
+    },
+    {
+      "component": "Ubuntu-libreadline8t64",
+      "file": "Ubuntu-libreadline8t64-copyright.txt",
+      "sha256": "854C6F5F249A109A913E1E58528445C4FEC96F063AE8BA496BFB2B460BCC6866",
+      "bytes": 4314
+    },
+    {
+      "component": "Ubuntu-libsqlite3-0",
+      "file": "Ubuntu-libsqlite3-0-copyright.txt",
+      "sha256": "78E9DF8F8153C91C762EC970B82D224AC4D30F05AA7773E7E17E268141E53873",
+      "bytes": 1833
+    },
+    {
+      "component": "Ubuntu-libtinfo6",
+      "file": "Ubuntu-libtinfo6-copyright.txt",
+      "sha256": "7C9D2C8DBEE48B6F4BBBFFB1F370CC5858DE11CC4F5A70C5C622C274917E1C65",
+      "bytes": 4670
+    },
+    {
+      "component": "Ubuntu-zlib1g",
       "file": "Ubuntu-zlib1g-copyright.txt",
-      "bytes": 2927,
-      "sha256": "9E5B96D63773A5D177BA264254390F792BE07E41748EBD94730981C6CAC31CC6"
+      "sha256": "9E5B96D63773A5D177BA264254390F792BE07E41748EBD94730981C6CAC31CC6",
+      "bytes": 2927
+    },
+    {
+      "component": "Ubuntu-libyaml-0-2",
+      "file": "Ubuntu-libyaml-0-2-copyright.txt",
+      "sha256": "64609FA7E24F1DAA7C78A84E571D5C385350534EAD8830158E0744C64F0497B6",
+      "bytes": 1639
+    },
+    {
+      "component": "Ubuntu-gcc-13-base",
+      "file": "Ubuntu-gcc-13-base-copyright.txt",
+      "sha256": "08C6F3DEE4C19AA1E57EB7D4AD45829B2E99656313BD07FA0922E2553F500BE5",
+      "bytes": 69100
     }
   ]
 }

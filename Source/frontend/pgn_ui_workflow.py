@@ -180,6 +180,8 @@ def primary(card, context):
 
 def pause_control(context):
     status = phase(context)
+    if status == "IDLE" and context.get("idle_start_available"):
+        return {"label": "Start", "key": "s", "shortcut": "S", "enabled": True}
     if context.get("_ui_state", {}).get("pending_worker_request"):
         return {
             "label": "Pausing…" if status == "PAUSING" else "Pending…",

@@ -232,7 +232,7 @@ def argument_parser():
     startup.add_argument(
         "--idle",
         action="store_true",
-        help="Open the complete Idle console without GPU discovery or starting a search",
+        help="Open the Idle console with read-only GPU discovery; search starts only on Start or Resume",
     )
     parser.add_argument(
         "--name", default="Robert", help="Name printed in the Brian-compatible report"
@@ -369,17 +369,9 @@ def enumerate_gpus(worker):
         raise RuntimeError(
             "GPU discovery failed: " + (result.stderr.strip() or result.stdout.strip())
         )
-    try:
-        info = json.loads(result.stdout)
-        devices = info["devices"]
-        required = ("index", "model", "uuid", "cc_major", "cc_minor", "vram_bytes")
-        if not isinstance(devices, list) or any(
-            not isinstance(d, dict) or any(k not in d for k in required) for d in devices
-        ):
-            raise ValueError
-    except (ValueError, KeyError, TypeError):
-        raise RuntimeError("Worker --device-info did not return its expected device JSON")
-    return info, devices
+    from pgn_idle_device import decode_devices
+
+    return decode_devices(result.stdout)
 
 
 def select_gpu(devices, index):
@@ -408,7 +400,7 @@ def new_run_directory(parent):
     return Path(tempfile.mkdtemp(prefix="pgn68-" + stamp + "-", dir=parent))
 
 
-def atomic_text(path, text):
+def atomic_text(path, text, *, retry_seconds=1):
     # A leftover from an interrupted write must not poison the next session.
     # Use our own same-directory file; keep the old published report intact.
     fd, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".pending", dir=path.parent)
@@ -418,7 +410,7 @@ def atomic_text(path, text):
             stream.write(text)
             stream.flush()
             os.fsync(stream.fileno())
-        deadline = time.monotonic() + 1
+        deadline = time.monotonic() + retry_seconds
         while True:
             try:
                 os.replace(pending, path)
@@ -429,6 +421,12 @@ def atomic_text(path, text):
                 time.sleep(0.02)  # A concurrent results reader can briefly deny replacement.
     finally:
         pending.unlink(missing_ok=True)
+
+
+def atomic_export_text(path, text):
+    # Derived reports have a separate retry queue. Do not stall the live UI
+    # on each locked file; authoritative callers retain atomic_text's policy.
+    atomic_text(path, text, retry_seconds=0)
 
 
 def exact_prime(n):
@@ -664,7 +662,7 @@ class PauseKeys:
             value = translate(self.reader.read(timeout=0))
             if value == "TICK":
                 return None
-            if isinstance(value, str) and value.lower() in ("p", "m", "f", "q"):
+            if isinstance(value, str) and value.lower() in ("p", "m", "f", "q", "s"):
                 return value.lower()
         return None
 
@@ -1010,6 +1008,8 @@ def idle_menu_before_gpu(args, parser):
     resumable = next((session for session in catalog_sessions(context) if session.resumable), None)
     if resumable:
         context["resume_folder"] = str(resumable.folder)
+        context["resume_configuration"] = dict(resumable.metadata.get("configuration") or {})
+        context["resume_device"] = dict(resumable.metadata.get("device") or {})
     restore_start_failure(context)
     args._idle_menu_context = context
     if not args.idle:
@@ -1023,7 +1023,7 @@ def idle_menu_before_gpu(args, parser):
 
     state = {
         "status": "Idle",
-        "gpu_name": "No GPU selected",
+        "gpu_name": "Detecting GPU…",
         "gpu_index": None,
         "vram_mib": None,
         "driver": None,
@@ -1041,22 +1041,95 @@ def idle_menu_before_gpu(args, parser):
         "display_rows": args.display_rows,
         "target_merit": args.target_merit,
         "outputfile": str(output),
-        "key_help": "M menu | F sessions | Q quit",
+        "key_help": "S Start | M menu | F sessions | Q quit",
+        "idle_start_available": not context.get("resume_folder") or bool(context.get("prepared_request")),
         "resume_folder": context.get("resume_folder"),
     }
     desk = Dashboard()
+    probe = None
+    clocks = None
+    probed_uuid = None
+    preview_signature = None
     try:
         with PauseKeys() as keys:
             desk.update(state, force=True)
             if not keys.available:
                 return None
+            from pgn_idle_device import IdleDeviceProbe
+
+            try:
+                probe = IdleDeviceProbe([str(resolve_worker(args.worker)), "--device-info"], options=child_options())
+            except (OSError, RuntimeError) as error:
+                state["gpu_name"] = "GPU discovery unavailable: " + str(error)
             while True:
+                prepared = context.get("prepared_request")
+                resuming = not prepared and bool(context.get("resume_folder"))
+                view = prepared or (context.get("resume_configuration") if resuming else None) or config
+                signature = repr(view)
+                if signature != preview_signature:
+                    # The plan shown on Idle must be the same plan dispatched
+                    # by its primary action, including a saved Ready range.
+                    if prepared:
+                        import copy
+
+                        preview = copy.copy(args)
+                        apply_new_parameters(preview, view)
+                        view_end = validate_range(preview, parser)
+                        state.update(start=preview.start, end=view_end, minimum_gap=preview.count_gap,
+                                     detailed_min_gap=preview.detail_gap, target_merit=preview.target_merit)
+                    else:
+                        state.update(start=int(view.get("start", args.start)), end=int(view.get("end", end)),
+                                     minimum_gap=view.get("count_gap", args.count_gap),
+                                     detailed_min_gap=view.get("detail_gap", args.detail_gap),
+                                     target_merit=view.get("target_merit", args.target_merit))
+                    preview_signature = signature
+                if probe:
+                    discovery = probe.poll()
+                    if discovery:
+                        info, devices = discovery
+                        values = view
+                        try:
+                            selected_index = values.get("gpu", args.gpu)
+                            if resuming and context.get("resume_device", {}).get("uuid"):
+                                matches = [d for d in devices if d["uuid"] == context["resume_device"]["uuid"]]
+                                if len(matches) != 1:
+                                    raise RuntimeError("Saved session GPU is not visible")
+                                selected_index = matches[0]["index"]
+                            selected, _ = select_gpu(devices, selected_index)
+                            state.update(gpu_name=selected["model"], gpu_index=selected["index"],
+                                         vram_mib=int(selected["vram_bytes"]) // (1024 * 1024),
+                                         compute_capability=f"{selected['cc_major']}.{selected['cc_minor']}",
+                                         cuda_driver_api_version=info.get("driver_version"))
+                            context.update(gpu_name=selected["model"], gpu_index=selected["index"])
+                            if probed_uuid != selected["uuid"]:
+                                if clocks:
+                                    clocks.finish()
+                                from pgn_gpu_monitor import GpuClockMonitor
+
+                                clocks = GpuClockMonitor(selected["uuid"])
+                                probed_uuid = selected["uuid"]
+                        except (OSError, RuntimeError, ValueError) as error:
+                            state["gpu_name"] = "GPU unavailable: " + str(error)
+                    elif probe.error:
+                        state["gpu_name"] = probe.error
+                if clocks:
+                    observed = clocks.snapshot()
+                    state.update(clock_sm_mhz=observed.get("sm_mhz"), clock_mem_mhz=observed.get("memory_mhz"))
+                state["idle_start_available"] = not context.get("resume_folder") or bool(context.get("prepared_request"))
                 desk.update(state)  # Refresh viewport/hit map/hover even while no worker runs.
                 pressed = keys.poll()
                 if pressed == "q":
                     return None
-                if pressed == "p" and context.get("resume_folder"):
+                if pressed == "p" and context.get("resume_folder") and not context.get("prepared_request"):
                     return MenuAction("resume", {"folder": context["resume_folder"]})
+                if pressed == "s":
+                    prepared = context.get("prepared_request")
+                    if not prepared and context.get("resume_folder"):
+                        return MenuAction("resume", {"folder": context["resume_folder"]})
+                    values = dict(prepared or context.get("configuration") or config)
+                    if prepared and context.get("prepared_request_saved_id"):
+                        values["plan_id"] = context["prepared_request_saved_id"]
+                    return MenuAction("new", values)
                 if pressed in ("m", "f"):
                     desk.finish()
                     choice = menu(context) if pressed == "m" else file_menu(context)
@@ -1069,6 +1142,10 @@ def idle_menu_before_gpu(args, parser):
                 # Pause is deliberately inert: there is no worker to pause.
                 time.sleep(0.03)
     finally:
+        if probe:
+            probe.close()
+        if clocks:
+            clocks.finish()
         desk.finish()
 
 

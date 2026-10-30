@@ -30,6 +30,7 @@ from pgn_developer_diag import DeveloperRecorder
 from pgn_gpu_monitor import GpuClockMonitor
 from pgn_range_eta import measurement, retain
 from pgn_queue_control import apply_queue_request
+from pgn_exports import DerivedExports
 
 
 def profile_candidates(args, device, api):
@@ -181,6 +182,10 @@ def run(store, args, device, environment, gpu_info, api):
     telemetry = api.Telemetry(folder, device["uuid"], True) if args.telemetry else None
     clock_monitor = None
     summary = (folder / "summary.log").open("a", encoding="utf-8")
+    def export_notice(text):
+        summary.write((text or "Deferred reports published") + "\n")
+        summary.flush()
+    exports = DerivedExports(getattr(api, "atomic_export_text", api.atomic_text), export_notice)
     debug = (folder / "native-debug.log").open("a", encoding="utf-8") if args.debug else None
 
     view_cache = {}
@@ -293,10 +298,12 @@ def run(store, args, device, environment, gpu_info, api):
             "_ui_state": ui_state,
             "_parser_factory": getattr(api, "argument_parser", None),
             "_range_validator": getattr(api, "validate_range", None),
+            "export_notice": exports.notice,
         }
 
     def publish(force=False):
         nonlocal cache_warning_seen
+        exports.retry()
         warning = getattr(store, "cache_error", None)
         if warning != cache_warning_seen:
             if warning:
@@ -374,7 +381,7 @@ def run(store, args, device, environment, gpu_info, api):
                     "M menu | F files | Q quit"
                     if status == "COMPLETE"
                     else "P pause/resume | M menu | F files | Q safe quit"
-                ),
+                ) + (" | " + exports.notice if exports.notice else ""),
             },
             force=force,
         )
@@ -385,7 +392,7 @@ def run(store, args, device, environment, gpu_info, api):
         detail_total = records.count_rows(args.detail_gap, below)
         detail_rows = records.top(args.detail_gap, below, args.report_top)
         args._detail_total_count = detail_total
-        files = write_index_counts(folder, args, end, position, status, records, api.atomic_text)
+        files = write_index_counts(folder, args, end, position, status, records, exports.write)
         report_text = api.brian_report(
             args.name,
             started,
@@ -404,7 +411,7 @@ def run(store, args, device, environment, gpu_info, api):
             report_text += "\nTiming note: current worker wall is UNKNOWN; current rates are unavailable. The numeric active-seconds field above contains only the known component.\n"
         elif rate_unknown:
             report_text += "\nTiming note: historical crash wall is UNKNOWN; displayed active time/rates are since this resume only, replay included.\n"
-        api.atomic_text(report, report_text)
+        exports.write(report, report_text)
         screen = final_screen_text(context()) + "\nBEST / COUNTED GAPS\nGAP MERIT LOWER_PRIME\n"
         screen += "".join(
             f"{g} {m:.4f} {n}\n"
@@ -414,7 +421,7 @@ def run(store, args, device, environment, gpu_info, api):
             f"{g} {m:.4f} {n}\n"
             for g, m, n in records.recent(args.count_gap, below, args.display_rows)
         )
-        api.atomic_text(folder / "finalscreen.txt", screen)
+        exports.write(folder / "finalscreen.txt", screen)
         api.atomic_text(
             folder / "run.json",
             json.dumps(
@@ -441,6 +448,7 @@ def run(store, args, device, environment, gpu_info, api):
                     "files": files,
                     "failure": failure,
                     "no_network_pgn": True,
+                    "exports_pending": exports.notice,
                 },
                 indent=2,
             )

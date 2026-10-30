@@ -1,7 +1,7 @@
 BUILD FROM SOURCE
 =================
-Validated frontend interpreters: Python3.10 on Windows andPython3.12 on Ubuntu.
-CUDA12.8, VS2022/MSVC14.36 on Windows; Ubuntu24.04/GCC13 on Linux. Compilation does not require a GPU.
+Tested toolchains: Python3.12, CUDA12.8, VS2022/MSVC14.36 on Windows;
+Ubuntu24.04/GCC13 on Linux. Compilation does not require a GPU.
 
 Install the build requirements in a local virtual environment:
   python -m pip install -r requirements-build.txt

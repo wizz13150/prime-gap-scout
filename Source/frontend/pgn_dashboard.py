@@ -210,12 +210,9 @@ def render(state, width=110, height=30):
     total = max(0, end - start) if start is not None and end is not None else 0
     current = start + completed if start is not None else None
     rate = _num(state.get("speed_rate")) if "speed_rate" in state else _num(state.get("rate"))
-    if "speed_rate" not in state and rate is None and elapsed > 0:
-        rate = completed / elapsed
     proportion = min(1.0, max(0.0, completed / total)) if total else 0.0
-    eta = (total - completed) / rate if total and rate and rate > 0 else None
-    if total and completed >= total:
-        eta = 0
+    from pgn_compute_eta import forecast_seconds
+    eta = forecast_seconds(state)
     status = safe(state.get("status", "READY"))
     color = (
         "green"
@@ -261,7 +258,7 @@ def render(state, width=110, height=30):
     avg_detail = (
         ("Observed " + f"{observed_tenths:.1f}" + " / 60 s")
         if not average_mature
-        else "Observed active wall"
+        else "Observed active calculation"
     )
     avg_title = "Avg · 60 sec"
     paused_detail = (
@@ -542,18 +539,19 @@ def render(state, width=110, height=30):
     key_help = " | ".join(
         item for item in key_help.split(" | ") if not item.strip().upper().startswith("F ")
     )
-    if not any(item.strip().upper().startswith("P ") for item in key_help.split(" | ")):
+    if status != "IDLE" and not any(item.strip().upper().startswith("P ") for item in key_help.split(" | ")):
         key_help = "P Pause/resume | " + key_help
     from pgn_ui_views import _footer, _footer_specs
     from pgn_ui_workflow import pause_control
 
     raw_specs, _ = _footer_specs(key_help.replace(" | ", " · "))
+    primary_control = pause_control(state)
     buttons = [
         dict(label=label, shortcut=shortcut, key=key, enabled=True)
         for label, shortcut, key in raw_specs
-        if key not in ("ESC", "p")
+        if key not in ("ESC", "p", primary_control["key"])
     ]
-    buttons.insert(0, pause_control(state))
+    buttons.insert(0, primary_control)
     footer, button_height, button_regions, _ = _footer(buttons, width, height, include_back=False)
     assert button_height == 3
     if width < 66 or height < fixed + result_min:

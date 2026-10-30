@@ -1,12 +1,13 @@
-Prime Gap Scout 1.3.1 - operator-approved release
+Prime Gap Scout1.3.2
+Startup and frontend reliability patch. Engines unchanged.
 
-Fix a Windows owner-completion file sharing/access race that could end a valid
-search with PermissionError while reading done.json. Completion polling now
-allows a bounded transient I/O grace period and caches the accepted exact
-receipt. Atomic receipt publication retries only the same fsynced bytes.
-Persistent denial, missing evidence, wrong identity or corrupt metadata remains
-an explicit failure and never becomes a successful completion.
+Idle now performs read-only GPU discovery and exposes direct Start [S].
+Resume [P] is shown for a suspended saved session. GPU discovery does not
+create a mining session or run a self-test/search; explicit Start/Resume does.
+Launcher parameter edits apply after saving and relaunching the launcher.
 
-Owner-wait failures are reported separately from timing failures. CUDA engines,
-arithmetic, thresholds and checkpoint compatibility images are unchanged.
-No automatic uploads or GPU setting changes. Operator validation completed before GitHub publication.
+Derived-export sharing locks are deferred without weakening session/checkpoint
+integrity. Live ETA/speed windows restart with the actual worker instance.
+
+Portable Windows: real RTX3090 CUDA validation. Portable Ubuntu: real ELF/PTY
+navigation validation; physical Linux CUDA and sm120 hardware remain untested.

@@ -120,6 +120,13 @@ class WorkRates:
         self.prp_current = None
 
     def begin_instance(self):
+        # A resumed/restarted worker is a fresh measurement epoch. Previous
+        # frequencies, replay/error regimes or changed min-gap/K must not
+        # dilute its window, even when the physical GPU is unchanged.
+        self.history.clear()
+        self.elapsed = 0.0
+        self.positions = 0
+        self.tests = 0
         self.last = None
         self.current = None
         self.prp_current = None
@@ -150,6 +157,7 @@ class WorkRates:
                 "average_rate": None,
                 "observed_active_seconds": 0.0,
                 "compute_tests_rate": None,
+                "eta_rate": None,
             }
         last = self.history[-1]
         first = self.history[0]
@@ -179,4 +187,5 @@ class WorkRates:
             "average_rate": (last[1] - window[1]) / seconds if seconds > 0 else None,
             "observed_active_seconds": min(60.0, seconds),
             "compute_tests_rate": (last[2] - recent[2]) / span if span > 0 else None,
+            "eta_rate": (last[1] - window[1]) / seconds if seconds > 0 else None,
         }
