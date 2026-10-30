@@ -1,4 +1,4 @@
-Prime Gap Scout 1.3.1 - local validation candidate
+Prime Gap Scout 1.3.1 - operator-approved release
 
 Fix a Windows owner-completion file sharing/access race that could end a valid
 search with PermissionError while reading done.json. Completion polling now
@@ -9,5 +9,4 @@ an explicit failure and never becomes a successful completion.
 
 Owner-wait failures are reported separately from timing failures. CUDA engines,
 arithmetic, thresholds and checkpoint compatibility images are unchanged.
-No automatic uploads or GPU setting changes. Awaiting operator validation
-before GitHub publication.
+No automatic uploads or GPU setting changes. Operator validation completed before GitHub publication.

@@ -6,26 +6,25 @@ persistent denial, corrupt/missing receipt and wrong process identity.
 receipts. No GPU was involved in those process-lifecycle checks.
 
 The rebuilt frozen Windows application completed six 67-bit chunks totaling
-6e12 positions and two 95-bit chunks totaling2e12 positions on an RTX3090.
-All eight process owners closed correctly. The95-bit gap set exactly matched
+6e12 positions and two 95-bit chunks totaling 2e12 positions on an RTX 3090.
+All eight process owners closed correctly. The 95-bit gap set exactly matched
 the retained eight-gap reference. This is not a speed-record measurement.
 Native engine files retain the same qualified hashes.
 
-The rebuilt Ubuntu application reports1.3.1. The portable publication tests pass
-on Python3.12 (13 passed, two Windows-only cases skipped). Physical Linux CUDA
+The rebuilt Ubuntu application reports 1.3.1. The portable publication tests pass
+on Python 3.12 (13 passed, two Windows-only cases skipped). Physical Linux CUDA
 execution is not claimed.
 
 ## Inherited validation of unchanged engine/UI code
 
 # Release validation
 
-This is the local1.3.1 build prepared for operator approval. No GitHub upload
-or publication has been performed.
+This is the1.3.1 build approved by the operator for publication.
 
-The29 arithmetic specializations retain their individual optimizations and
-adaptive thresholds.22,272 independent host checks pass. All29 cleaned GPU
+The 29 arithmetic specializations retain their individual optimizations and
+adaptive thresholds.22,272 independent host checks pass. All 29 cleaned GPU
 profiles matched retained reference gap sets and counters; paired GPU changes
-range from−1.32% to+1.29% on the same RTX3090, within the operator's2% tolerance.
+range from−1.32% to+1.29% on the same RTX 3090, within the operator's2% tolerance.
 The final comment-only native rebuild preserves all61 compared kernel resource
 layouts. These checks are not new graph records or hardware-independent speeds.
 
@@ -37,7 +36,7 @@ memory clocks with CSV recording disabled and during developer recording.
 An interrupted range from the previous release resumed in this release with
 the exact original worker image, same session, and advancing positions.
 
-An actual95-bit search completed2e12 positions at automatic cutoff1332 with
+An actual 95-bit search completed2e12 positions at automatic cutoff1332 with
 debug and telemetry files. The native274-case self-test and the packaged public
 reference comparison both passed. Component tests are distinct from a complete
 search throughput measurement.
