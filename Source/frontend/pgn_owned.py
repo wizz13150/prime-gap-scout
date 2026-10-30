@@ -36,6 +36,8 @@ def _kernel():
         "WaitForSingleObject": ([T.HANDLE, T.DWORD], T.DWORD),
         "CloseHandle": ([T.HANDLE], T.BOOL),
         "OpenProcess": ([T.DWORD, T.BOOL, T.DWORD], T.HANDLE),
+        "GetCurrentProcess": ([], T.HANDLE),
+        "IsProcessInJob": ([T.HANDLE, T.HANDLE, C.POINTER(T.BOOL)], T.BOOL),
         "GetProcessTimes": ([T.HANDLE] + [C.POINTER(T.FILETIME)] * 4, T.BOOL),
         "GetExitCodeProcess": ([T.HANDLE, C.POINTER(T.DWORD)], T.BOOL),
         "CreateJobObjectW": ([C.c_void_p, T.LPCWSTR], T.HANDLE),

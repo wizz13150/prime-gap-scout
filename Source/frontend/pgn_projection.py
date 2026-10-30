@@ -6,6 +6,7 @@ through visible/threshold indexes. Disk grows with records; RAM does not.
 """
 
 import copy
+import math
 
 
 def encoded(number):
@@ -24,6 +25,7 @@ class Projection:
         self.count = int(configuration.get("count_gap", configuration.get("min_gap", 960)))
         self.detail = int(configuration.get("detail_gap", configuration.get("min_gap", 960)))
         self.limit = max(30, int(configuration.get("report_top", 100)))
+        self.target = float(configuration.get("target_merit", 32))
         first = ((self.count + 99) // 100) * 100
         self.thresholds = sorted(
             {self.count, *[value for value in range(first, first + 600, 100) if value > self.count]}
@@ -60,6 +62,17 @@ class Projection:
             self.db.commit()
             self.value = value
 
+        # Migrate the derived histogram once, from the committed prefix only.
+        # Best/Recent are bounded views and cannot supply complete statistics.
+        if self.value.get("statistics_target") != self.target:
+            value = copy.deepcopy(self.value)
+            value.update(merit_band_counts={}, at_or_above_target=0, statistics_target=self.target)
+            for gap, low in self.db.execute("SELECT gap,lo FROM gaps WHERE visible=1 AND count_ok=1"):
+                self.add_merit(value, gap, decoded(low), 1)
+            index.put_meta("projection", value)
+            self.db.commit()
+            self.value = value
+
         if set(self.value.get("threshold_counts", {})) != {str(t) for t in self.thresholds}:
             self.value = copy.deepcopy(self.value)
             self.value["threshold_counts"] = {
@@ -74,6 +87,14 @@ class Projection:
             index.put_meta("projection", value)
             self.db.commit()
             self.value = value
+
+    def add_merit(self, value, gap, low, delta):
+        merit = gap / math.log(low)
+        if merit >= self.target:
+            value["at_or_above_target"] += delta
+        else:
+            key = str(math.floor(merit))
+            value["merit_band_counts"][key] = value["merit_band_counts"].get(key, 0) + delta
 
     def refill(self, value):
         value["view_cache_version"] = 3
@@ -102,6 +123,7 @@ class Projection:
         if gap >= self.count:
             value["counts"][group] += 1
             value["count_total"] += 1
+            self.add_merit(value, gap, low, 1)
         if gap >= self.detail:
             value["detail_total"] += 1
         for threshold in self.thresholds:
@@ -119,7 +141,7 @@ class Projection:
         left, right = sorted((old, prefix))
         delta = 1 if prefix > old else -1
         cursor = self.db.execute(
-            "SELECT gap,bin FROM gaps WHERE lo>=? AND lo<?", (encoded(left), encoded(right))
+            "SELECT gap,bin,lo FROM gaps WHERE lo>=? AND lo<?", (encoded(left), encoded(right))
         )
         first = cursor.fetchone()
         if first is None:
@@ -128,10 +150,11 @@ class Projection:
         value = copy.deepcopy(value)
 
         def accept(row):
-            gap, group = row
+            gap, group, low = row
             if gap >= self.count:
                 value["counts"][group] += delta
                 value["count_total"] += delta
+                self.add_merit(value, gap, decoded(low), delta)
             if gap >= self.detail:
                 value["detail_total"] += delta
             for threshold in self.thresholds:

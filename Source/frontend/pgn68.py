@@ -1083,6 +1083,15 @@ def idle_menu_before_gpu(args, parser):
                                      detailed_min_gap=view.get("detail_gap", args.detail_gap),
                                      target_merit=view.get("target_merit", args.target_merit))
                     preview_signature = signature
+                    if resuming:
+                        import sqlite3
+                        from pgn_statistics import saved_range_preview
+                        try:
+                            state.update(saved_range_preview(context["resume_folder"], view, args.display_rows))
+                        except (OSError, ValueError, KeyError, TypeError, sqlite3.Error):
+                            state.update(range_statistics=None, statistics_notice="Resume to load saved statistics")
+                    else:
+                        state.update(position=0, tests=0, gap_count=0, gaps=[], range_statistics=None)
                 if probe:
                     discovery = probe.poll()
                     if discovery:

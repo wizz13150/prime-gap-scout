@@ -31,6 +31,7 @@ from pgn_gpu_monitor import GpuClockMonitor
 from pgn_range_eta import measurement, retain
 from pgn_queue_control import apply_queue_request
 from pgn_exports import DerivedExports
+from pgn_statistics import statistics_state
 
 
 def profile_candidates(args, device, api):
@@ -359,6 +360,7 @@ def run(store, args, device, environment, gpu_info, api):
                 "minimum_gap": args.count_gap,
                 "detailed_min_gap": args.detail_gap,
                 "gap_count": ui_view()["count"],
+                "range_statistics": statistics_state(records.projection.value),
                 "gap_threshold_counts": {
                     int(k): v for k, v in records.projection.value["threshold_counts"].items()
                 },

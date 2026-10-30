@@ -1,0 +1,24 @@
+{
+  "version": "1.3.3",
+  "Windows_frontend_sha256": "daa74d65924372b01b002d48e87175d64605dd2d8764b795e3bf26d1ba4989b4",
+  "Ubuntu_frontend_sha256": "b0dfa08d7062a29a14c80f51218b00bf188f736cea002917994a02059fb23c03",
+  "presentation_sha256": "f586c4146d1610593845e86635b2ad9f2be51dde837d13924dd2925b37992956",
+  "CUDA_engines_changed": false,
+  "validation": {
+    "source_tests": 36,
+    "real_CPU_child_lifecycles": 24,
+    "nested_windows_host": "Real nested Job startup and forced ancestor termination: controller and child handles observed exited",
+    "Windows_real_user_session": "New/Save/Start/repeated-Enter/Pause/Resume/form range switch/original Suspended card/safe quit/reopen/abrupt UI termination/native orphan closure/restart/developer diagnostic ZIP; temporary statistics.csv sharing denial did not stop calculation",
+    "Windows_95": {
+      "positions": 8000000000000,
+      "tests": 20793232629,
+      "retained_gaps": 41,
+      "complete_statistics_index_parity": true,
+      "CSV_present": true,
+      "saved_95_preview_with_different_68_launcher": true
+    },
+    "Ubuntu": "Real frozen ELF PTY: complete three-column Idle/menu/back/Quit and clean exit. No physical Linux GPU compute test.",
+    "physical_sm120_tested": false
+  },
+  "not_network_acceptance": true
+}

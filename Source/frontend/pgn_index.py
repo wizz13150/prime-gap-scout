@@ -293,6 +293,7 @@ def read_metadata_snapshot(path):
             "next_range",
             "prepared_replacement",
             "completed_chunk_count",
+            "projection",
         )
         placeholders = ",".join("?" for _ in keys)
         rows = connection.execute(

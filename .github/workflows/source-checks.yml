@@ -23,5 +23,5 @@ jobs:
         run: python -m compileall -q Source/frontend Source/tests
       - name: Check independent arithmetic fixtures
         run: python Source/native/generate_diagnostic.py --check
-      - name: Check completion publication and Windows sharing races
-        run: python Source/tests/test_owner_publication.py
+      - name: Check standalone lifecycle, statistics and Windows process hosts
+        run: python -m unittest discover -s Source/tests -p "test_*.py"

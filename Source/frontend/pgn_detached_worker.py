@@ -1,4 +1,4 @@
-"""Windows GPU owner survives a closed terminal and drains one exact worker.
+"""Windows controller drains one exact worker under explicit OS ownership.
 
 Local file IPC only. The UI never owns the compute Job handle. No GPU API is
 called here. A controller cannot be reused to run a second command.
@@ -69,8 +69,14 @@ def boot_main(path):
     k.IsProcessInJob.argtypes = [T.HANDLE, T.HANDLE, C.POINTER(T.BOOL)]
     k.IsProcessInJob.restype = T.BOOL
     k.GetCurrentProcess.restype = T.HANDLE
-    if not k.IsProcessInJob(k.GetCurrentProcess(), None, C.byref(inside)) or inside.value:
-        raise RuntimeError("Detached GPU owner still belongs to its parent Job; no worker launched")
+    if not k.IsProcessInJob(k.GetCurrentProcess(), None, C.byref(inside)):
+        raise RuntimeError("Cannot determine the controller's enclosing Job; no worker launched")
+    # An enclosing host may prohibit breakaway. WindowsOwnedProcess must still
+    # assign the suspended compute child to our kill-on-close Job before any
+    # launch commitment. Windows enforces both Jobs' limits; incompatible nesting
+    # fails while the child remains suspended. If the host kills its whole Job,
+    # the controller and nested child terminate together; committed checkpoints
+    # remain the only resume authority.
     cmd = data["command"]
     stop = Path(cmd[cmd.index("--stop-file") + 1]).resolve()
     state = Path(cmd[cmd.index("--state") + 1]).resolve()
@@ -101,6 +107,7 @@ def boot_main(path):
                 "pid": process.pid,
                 "birth": process.birth,
                 "owner_pid": os.getpid(),
+                "controller_in_parent_job": bool(inside.value),
                 "image_sha256": data["image_sha256"],
             },
         )
@@ -283,15 +290,24 @@ class DetachedWindowsProcess:
             (self.root / "controller.stdout").open("xb") as out,
             (self.root / "controller.stderr").open("xb") as err,
         ):
-            self.controller = subprocess.Popen(
-                entry,
-                stdin=subprocess.DEVNULL,
-                stdout=out,
-                stderr=err,
-                env=env,
-                close_fds=True,
-                creationflags=0x01000000 | 0x8 | 0x200,
-            )
+            options = dict(stdin=subprocess.DEVNULL, stdout=out, stderr=err,
+                           env=env, close_fds=True)
+            try:
+                self.controller = subprocess.Popen(
+                    entry, creationflags=0x01000000 | 0x8 | 0x200, **options)
+                self.controller_job_mode = "breakaway"
+            except OSError as error:
+                # Task Scheduler and other process hosts can forbid breakaway.
+                # Inherit their limits instead. The compute child still starts
+                # suspended and must enter our own kill-on-close nested Job.
+                # Never retry a general access error outside an enclosing Job.
+                in_job = self.T.BOOL()
+                if (getattr(error, "winerror", None) != 5 or
+                    not self.k.IsProcessInJob(self.k.GetCurrentProcess(), None,
+                                             C.byref(in_job)) or not in_job.value):
+                    raise
+                self.controller = subprocess.Popen(entry, creationflags=0x8 | 0x200, **options)
+                self.controller_job_mode = "inherited-parent-job"
         until = time.monotonic() + 30
         while not (self.root / "ready.json").is_file():
             if self.controller.poll() is not None or (self.root / "done.json").is_file():

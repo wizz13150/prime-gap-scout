@@ -67,6 +67,13 @@ def files_context(folder, metadata=None):
 def write_index_counts(folder, args, end, position, status, index, write):
     """Bounded-memory bin projection, even when the persistent index is huge."""
     below = args.start + position
+    from pgn_statistics import statistics_rows
+    rows = statistics_rows(index.projection.value, float(args.target_merit))
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(("distribution", "count"))
+    writer.writerows((label, count) for label, count, section in rows if not section)
+    write(folder / "statistics.csv", output.getvalue())
     if args.bins == len(index.bounds) - 1:
         counts = index.bin_counts(args.count_gap, below)
         bounds = index.bounds
