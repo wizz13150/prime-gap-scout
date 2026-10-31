@@ -2,7 +2,7 @@
   "schema": "SCOUT_RELEASE_VALIDATION_V1",
   "version": "1.3.5",
   "source_manifest_sha256": "96C600D3486DED57B400FCD4428E904F6A3743E49F587DC85E93847D9FFDDE13",
-  "windows_frontend_sha256": "CAE89CB7030FEDA249816C644ECCFD379DEEF244759E93231D368BDF249AB102",
+  "windows_frontend_sha256": "0E806BD79B6A8532955191822AFC422DB7487090862A3445DF11ED4122CC0D8B",
   "native_images": {
     "windows_sm86": "F0B9F81B3F8B8316BEADAB8F04E90A85C412D6DABE2793548F05D66D1AF80DD5",
     "windows_sm120": "23D8396FCBABE2955CF947BE399FFD8B707D8734BCF3BB11F97F1FC356339CED",
@@ -11,7 +11,7 @@
   },
   "checks": {
     "windows_python": {
-      "passed": 86,
+      "passed": 90,
       "skipped": 0
     },
     "ubuntu_artifact_lease": {
@@ -54,7 +54,13 @@
       "identical_full_gap_set": true,
       "handles_early": 213,
       "handles_late_max": 222
-    }
+    },
+    "ubuntu_portable_source": {
+      "passed": 81,
+      "skipped_windows_only": 9,
+      "total": 90
+    },
+    "live_menu_status": "Four production-renderer regressions: active searching wins over stale outer failure; actual active failure and pause remain visible"
   },
   "hardware_scope": {
     "physical_cuda": "Windows RTX 3090 / SM86",

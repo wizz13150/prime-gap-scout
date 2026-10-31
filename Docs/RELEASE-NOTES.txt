@@ -27,3 +27,7 @@ remain supported. Public launchers contain neutral editable defaults.
 See VALIDATION.md for actual tests and platform qualification limits. Historical
 benchmark measurements are retained, not presented as new speed records.
 Versions 1.3.3 and 1.3.4 remain withdrawn.
+
+Live-menu progress follows the controlled session state, so an older saved
+failure cannot replace Searching. Actual failure and paused states remain
+visible; the correction is covered by production-renderer regressions.

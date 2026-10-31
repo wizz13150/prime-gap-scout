@@ -13,8 +13,10 @@ def starting_requested(context):
 
 def phase(context):
     active = context.get("active_session") or context
+    # Only the controlled session owns execution state. A selected/saved
+    # context can still carry an earlier failure after a successful resume.
     value = (
-        str(context.get("status") or active.get("status") or "")
+        str(active.get("status") or context.get("status") or "")
         .split("|", 1)[0]
         .strip()
         .upper()

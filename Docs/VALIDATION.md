@@ -19,7 +19,7 @@ and six production searches at 68, 80 and 95 bits. Physical pieces retain
 distinct nonces and an ordered committed prefix. Pause and shutdown release
 the device lease; a completed resident job does not imply process exit.
 
-The assembled Python source passes 86 tests on Windows with no skipped cases.
+The assembled Python source passes 90 tests on Windows with no skipped cases.
 These include locked/missing/corrupt completion receipts, startup state,
 statistics/layout, durable ownership and session recovery. Artifact-cache
 checks confirm that Windows rejects modification or deletion of a leased
@@ -77,3 +77,15 @@ and counters; they are not a mathematical proof of exhaustive coverage.
 
 The application observes GPU clocks but does not tune hardware settings or
 upload scientific results. Release archives exclude saved user sessions.
+
+## Live menu status
+
+The controlled session owns the progress title. A stale outer/saved failure
+cannot override its active Searching state. An actual controlled-session
+failure remains Failed. Four production-renderer regressions cover these
+conflicting snapshots, pause, and failure without an active session.
+The clean-checkout Ubuntu suite passes 81 tests, with nine Windows-only tests
+skipped; all 90 pass on Windows. The prefix-recovery fixture uses an independent
+integer-pow oracle within the deterministic MR13 bound, without requiring
+installed native libraries. Shipped 95-bit proof-runtime integration is checked
+separately.
