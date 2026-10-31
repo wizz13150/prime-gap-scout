@@ -36,6 +36,15 @@ def top_rows(rows, limit=100):
     return sorted(rows, key=lambda row: (-row[0], row[2]))[:limit]
 
 
+def threshold_description(pin, role, fallback):
+    """Describe an immutable policy without labelling it as one fixed cutoff."""
+    segments = (pin or {}).get("segments", [])
+    values = [int(s[role + "_gap"]) for s in segments]
+    if not values or min(values) == max(values):
+        return str(values[0] if values else fallback)
+    return f"{min(values)}..{max(values)} (local threshold at the lower prime)"
+
+
 def files_context(folder, metadata=None):
     folder = Path(folder).resolve()
     # Exact known filenames: do not enumerate/sort every historical chunk file.
@@ -50,6 +59,10 @@ def files_context(folder, metadata=None):
         f"GapReport_details_ge{detail}.txt",
         f"counts_ge{count}.csv",
         f"counts_ge{count}.partial.csv",
+        "GapReport_details_policy.txt",
+        "counts_policy.csv",
+        "counts_policy.partial.csv",
+        "statistics.csv",
         "bins.csv",
         "finalscreen.txt",
         "session.json",
@@ -60,7 +73,9 @@ def files_context(folder, metadata=None):
     ]
     return {
         "folder": str(folder),
-        "files": {name: str(folder / name) for name in names if (folder / name).is_file()},
+        "files": {
+            name: str(folder / name) for name in names if (folder / name).is_file()
+        },
     }
 
 
@@ -68,6 +83,7 @@ def write_index_counts(folder, args, end, position, status, index, write):
     """Bounded-memory bin projection, even when the persistent index is huge."""
     below = args.start + position
     from pgn_statistics import statistics_rows
+
     rows = statistics_rows(index.projection.value, float(args.target_merit))
     output = io.StringIO(newline="")
     writer = csv.writer(output, lineterminator="\n")
@@ -75,29 +91,41 @@ def write_index_counts(folder, args, end, position, status, index, write):
     writer.writerows((label, count) for label, count, section in rows if not section)
     write(folder / "statistics.csv", output.getvalue())
     if args.bins == len(index.bounds) - 1:
-        counts = index.bin_counts(args.count_gap, below)
+        counts = index.policy_bin_counts("count", below)
         bounds = index.bounds
     else:
         bounds, counts = exact_bins(
-            args.start, end, args.bins, index.iter_rows(args.count_gap, below)
+            args.start, end, args.bins, index.policy_rows("count", below)
         )
     if status == "COMPLETE":
         if below != end:
             raise ValueError("Complete CSV requires the exact full prefix")
-        name = f"counts_ge{args.count_gap}.csv"
+        name = (
+            "counts_policy.csv"
+            if index.projection.count_dynamic
+            else f"counts_ge{args.count_gap}.csv"
+        )
         write(folder / name, complete_counts_text(counts))
         output = io.StringIO(newline="")
         writer = csv.writer(output, lineterminator="\n")
         writer.writerow(("index", "start", "end", "count"))
-        writer.writerows((i + 1, bounds[i], bounds[i + 1], counts[i]) for i in range(len(counts)))
+        writer.writerows(
+            (i + 1, bounds[i], bounds[i + 1], counts[i]) for i in range(len(counts))
+        )
         write(folder / "bins.csv", output.getvalue())
         return {"counts_csv": name, "bins_csv": "bins.csv", "partial_csv": None}
     output = io.StringIO(newline="")
     writer = csv.writer(output, lineterminator="\n")
-    writer.writerow(("index", "start", "end", "count_observed", "coverage", "covered_end"))
+    writer.writerow(
+        ("index", "start", "end", "count_observed", "coverage", "covered_end")
+    )
     for i, count in enumerate(counts):
         left, right = bounds[i], bounds[i + 1]
-        cover = "COMPLETE" if right <= below else "PARTIAL" if left < below else "UNSEARCHED"
+        cover = (
+            "COMPLETE"
+            if right <= below
+            else "PARTIAL" if left < below else "UNSEARCHED"
+        )
         writer.writerow(
             (
                 i + 1,
@@ -108,6 +136,10 @@ def write_index_counts(folder, args, end, position, status, index, write):
                 min(right, max(left, below)),
             )
         )
-    name = f"counts_ge{args.count_gap}.partial.csv"
+    name = (
+        "counts_policy.partial.csv"
+        if index.projection.count_dynamic
+        else f"counts_ge{args.count_gap}.partial.csv"
+    )
     write(folder / name, output.getvalue())
     return {"counts_csv": None, "bins_csv": None, "partial_csv": name}

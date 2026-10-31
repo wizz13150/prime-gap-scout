@@ -9,7 +9,7 @@ def statistics_rows(projection, target):
     Consecutive empty merit bands share a single zero row on screen. The saved
     histogram retains each band. Cumulative gap-size counts deliberately overlap.
     """
-    rows = [("Retained gaps", projection["count_total"], False),
+    rows = [("Larger gaps", projection["count_total"], False),
             ("GAP SIZE · cumulative", None, True)]
     for bound, count in sorted(projection["threshold_counts"].items(), key=lambda p: int(p[0])):
         rows.append((f">= {bound}", count, False))

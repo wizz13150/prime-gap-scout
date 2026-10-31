@@ -3,6 +3,7 @@
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import datetime as dt, hashlib, math, re
+from pgn_threshold_pointwise import MINIMUM_GAP
 
 SCHEMA = "PGN_MEASURED_RANGE_RATE_V1"
 MAX_AGE_SECONDS = 7 * 86400
@@ -29,6 +30,14 @@ def _utc(value):
 
 
 def _filters(config):
+    pin = config.get("threshold_policy")
+    if pin:
+        from pgn_threshold_policy import at_position
+
+        local = at_position(pin, _integer(config["start"]))
+        return tuple(
+            int(local[key]) for key in ("effective_gap_min", "count_gap", "detail_gap")
+        )
     minimum = int(config.get("min_gap", 960))
 
     def threshold(name):
@@ -36,11 +45,20 @@ def _filters(config):
         return minimum if value in (None, "") else int(value)
 
     values = (minimum, threshold("count_gap"), threshold("detail_gap"))
-    if not all(954 <= value <= 2147483647 for value in values):
+    if not all(MINIMUM_GAP <= value <= 2147483647 for value in values):
         raise ValueError()
     # Native emits the lower of the count/detail thresholds; MIN alone is
     # display/configuration policy when explicit overrides keep this floor.
     return (min(values[1:]), values[1], values[2])
+
+
+def _domain(start, end):
+    from pgn_native_contract import logical_range
+
+    start, end = logical_range(start, end)
+    if start >> 64 != (end - 1) >> 64:
+        raise ValueError("A comparable timing sample must cover one native word")
+    return "WORD:" + str(start >> 64)
 
 
 def measurement(
@@ -72,13 +90,16 @@ def measurement(
         ):
             return None
         minimum, count, detail = _filters(configuration)
+        domain = _domain(
+            _integer(configuration["start"]), _integer(configuration["end"])
+        )
         return {
             "schema": SCHEMA,
             "provenance": "owned_native_counters_and_process_clock",
             "gpu_uuid": str(gpu_uuid),
             "worker_sha256": str(worker_sha256).upper(),
             "profile_k": profile_k,
-            "domain": "H10",
+            "domain": domain,
             "engine": "walk",
             "filters": [minimum, count, detail],
             "positions": positions,
@@ -90,29 +111,47 @@ def measurement(
             "configured_profile": str(configuration.get("profile", "auto")),
             "scope": "active worker wall; initialization included",
         }
-    except (ValueError, TypeError, InvalidOperation, OverflowError):
+    except (ValueError, TypeError, KeyError, InvalidOperation, OverflowError):
         return None
 
 
 def retain(history, sample):
     if sample is None:
         return list(history or [])[-12:]
-    key = (sample["gpu_uuid"], sample["worker_sha256"], tuple(sample["filters"]))
+    key = (
+        sample["gpu_uuid"],
+        sample["worker_sha256"],
+        sample["domain"],
+        tuple(sample["filters"]),
+    )
     previous = next(
         (
             item
             for item in (history or [])
-            if (item.get("gpu_uuid"), item.get("worker_sha256"), tuple(item.get("filters", ())))
+            if (
+                item.get("gpu_uuid"),
+                item.get("worker_sha256"),
+                item.get("domain"),
+                tuple(item.get("filters", ())),
+            )
             == key
         ),
         None,
     )
-    if previous and str(previous.get("observed_utc", "")) >= str(sample.get("observed_utc", "")):
+    if previous and str(previous.get("observed_utc", "")) >= str(
+        sample.get("observed_utc", "")
+    ):
         return list(history)[-12:]
     kept = [
         item
         for item in (history or [])
-        if (item.get("gpu_uuid"), item.get("worker_sha256"), tuple(item.get("filters", ()))) != key
+        if (
+            item.get("gpu_uuid"),
+            item.get("worker_sha256"),
+            item.get("domain"),
+            tuple(item.get("filters", ())),
+        )
+        != key
     ]
     return (kept + [sample])[-12:]
 
@@ -130,12 +169,17 @@ def saved_session_measurement(session):
         ):
             return None
         chunks = metadata.get("closed_chunks") or []
-        if not chunks or len(chunks) != metadata.get("completed_chunk_count", len(chunks)):
+        if not chunks or len(chunks) != metadata.get(
+            "completed_chunk_count", len(chunks)
+        ):
             return None
         identities = [item["identity"] for item in chunks]
         if any(not (item.get("instance") or {}).get("closed") for item in chunks):
             return None
-        bindings = {(item["worker_sha256"].upper(), int(item["profile_k"])) for item in identities}
+        bindings = {
+            (item["worker_sha256"].upper(), int(item["profile_k"]))
+            for item in identities
+        }
         if len(bindings) != 1:
             return None
         image, profile = bindings.pop()
@@ -144,7 +188,10 @@ def saved_session_measurement(session):
             return None
         positions = int(run["positions"])
         if run.get("timing_complete") is not True:
-            if run.get("rate_scope") != "SINCE_RESUME" or "rate_origin_position" not in metadata:
+            if (
+                run.get("rate_scope") != "SINCE_RESUME"
+                or "rate_origin_position" not in metadata
+            ):
                 return None
             positions -= int(metadata["rate_origin_position"])
         report = Path(session.folder) / (
@@ -170,7 +217,8 @@ def saved_session_measurement(session):
             source="saved session " + session.session_id,
             closed=True,
             driver_api=(run.get("selected_gpu") or {}).get(
-                "cuda_driver_api_version", (run.get("selected_gpu") or {}).get("driver_version")
+                "cuda_driver_api_version",
+                (run.get("selected_gpu") or {}).get("driver_version"),
             ),
         )
     except (ValueError, TypeError, KeyError, OSError, UnicodeError):
@@ -221,14 +269,35 @@ def estimate(start, end, configuration, context, now=None):
     """Same function for live editor text and every prepared range card."""
     try:
         start, end = _integer(start), _integer(end)
-        if not (10 << 64) + 20 <= start < end < (11 << 64):
-            return unavailable("Enter a valid supported H10 range.")
-        if end > (11 << 64) - 4 * 1006632960:
-            return unavailable("This edge requires exact Native halo admission before ETA.")
+        domain = _domain(start, end)
+        configuration = dict(configuration, start=str(start), end=str(end))
+        from pgn_native_contract import fields
+
+        resolved = fields(
+            start,
+            end,
+            configuration.get(
+                "min_gap_requested", configuration.get("min_gap", "auto")
+            ),
+            configuration.get("count_gap_requested", configuration.get("count_gap")),
+            configuration.get("detail_gap_requested", configuration.get("detail_gap")),
+            configuration.get("threshold_policy"),
+        )
+        configuration.update(resolved)
+        signatures = {
+            (s["effective_gap_min"], s["count_gap"], s["detail_gap"])
+            for s in resolved["threshold_policy"]["segments"]
+        }
+        if len(signatures) != 1:
+            return unavailable(
+                "Comparable measurements are needed for each threshold interval."
+            )
         evidence = context.get("eta_evidence") or {}
         gpu = evidence.get("gpu_uuid") or context.get("gpu_uuid")
         choice = (
-            configuration.get("gpu") if "gpu" in configuration else configuration.get("gpu_index")
+            configuration.get("gpu")
+            if "gpu" in configuration
+            else configuration.get("gpu_index")
         )
         selected = int(0 if choice in (None, "") else choice)
         current_index = context.get("gpu_index")
@@ -254,7 +323,9 @@ def estimate(start, end, configuration, context, now=None):
                 and tuple(item.get("filters", ())) == _filters(configuration)
             ]
             if known:
-                actual = max(known, key=lambda item: str(item.get("observed_utc", "")))["profile_k"]
+                actual = max(known, key=lambda item: str(item.get("observed_utc", "")))[
+                    "profile_k"
+                ]
         if actual not in (8, 16, 32, 64):
             return unavailable("The actual Native profile is not resolved yet.")
         image = None
@@ -271,7 +342,9 @@ def estimate(start, end, configuration, context, now=None):
             if path:
                 image = _file_hash(path)
         if not image:
-            return unavailable("No authenticated worker image is available for comparison.")
+            return unavailable(
+                "No authenticated worker image is available for comparison."
+            )
         current = evidence.get("current")
         candidates = [(current, True)] if current else []
         candidates.extend(
@@ -293,7 +366,7 @@ def estimate(start, end, configuration, context, now=None):
             ):
                 continue
             if (
-                item.get("domain") != "H10"
+                item.get("domain") != domain
                 or item.get("engine") != "walk"
                 or tuple(item.get("filters", ())) != _filters(configuration)
             ):

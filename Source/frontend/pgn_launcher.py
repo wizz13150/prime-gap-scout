@@ -48,7 +48,7 @@ DEFAULTS = {
     "report_top": "100",
     "bins": "100",
     "target_merit": "32",
-    "name": "Robert",
+    "name": "",
     "profile": "auto",
     "chunk_length": "",
     "count_gap": "",
@@ -179,7 +179,7 @@ def generate(parser, directory):
         "# LENGTH and END are mutually exclusive. END is exclusive. Leave END blank for default1P.",
         "# Empty COUNT_GAP/DETAIL_GAP inherit MIN_GAP. RESUME keeps saved input/filter/profile.",
     ]
-    reference = ["PGN68 R5 PUBLIC PARAMETER REFERENCE - generated from argparse", ""]
+    reference = ["PRIME GAP SCOUT PUBLIC PARAMETER REFERENCE - generated from argparse", ""]
     for title, names in GROUPS:
         cmd += ["", "REM " + title]
         sh += ["", "# " + title]
@@ -205,26 +205,25 @@ def generate(parser, directory):
             reference += ["  " + options + " | " + variable(name) + "=" + default + " | " + text]
     cmd += [
         "",
-        'set "PGN_R5_LAUNCHER=1"',
-        'if not "%HEADLESS%"=="1" mode con cols=150 lines=46 >nul 2>&1',
+        'set "SCOUT_LAUNCHER=1"',
         '"%~dp0pgn68.exe"',
-        'set "PGN_R5_EXIT=%ERRORLEVEL%"',
-        'set "PGN_R5_LAUNCHER="',
+        'set "SCOUT_EXIT_STATUS=%ERRORLEVEL%"',
+        'set "SCOUT_LAUNCHER="',
         "echo.",
-        "echo PGN68 returned to this persistent prompt. Close the window only when YOU want.",
+        "echo Prime Gap Scout returned to this persistent prompt. Close the window only when YOU want.",
         'if "%HEADLESS%"=="1" goto finished',
         '"%ComSpec%" /d /k',
         ":finished",
-        "endlocal & exit /b %PGN_R5_EXIT%",
+        "endlocal & exit /b %SCOUT_EXIT_STATUS%",
     ]
     sh += [
         "",
-        "export PGN_R5_LAUNCHER=1",
+        "export SCOUT_LAUNCHER=1",
         "set +e",
         "./pgn68",
         "result=$?",
         "if [ -t 0 ] && [ -t 1 ]; then",
-        '  printf "\\nPGN68 returned to a persistent prompt. Close the window when YOU want.\\n"',
+        '  printf "\\nPrime Gap Scout returned to a persistent prompt. Close the window when YOU want.\\n"',
         "  exec /bin/bash -i",
         "fi",
         'exit "$result"',
@@ -233,3 +232,9 @@ def generate(parser, directory):
     (directory / "Start-PGN68.sh").write_text("\n".join(sh) + "\n", encoding="utf-8")
     (directory / "PUBLIC-PARAMETERS.txt").write_text("\n".join(reference) + "\n", encoding="utf-8")
     return {name: actions[name].option_strings for _, names in GROUPS for name in names}
+
+
+def launcher_requested(environment):
+    """Read the public flag and the previously distributed launcher alias."""
+    return (environment.get("SCOUT_LAUNCHER") == "1"
+            or environment.get("PGN_R5_LAUNCHER") == "1")

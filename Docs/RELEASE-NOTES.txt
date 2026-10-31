@@ -1,13 +1,29 @@
-Prime Gap Scout1.3.4
-Restores the familiar framed presentation and keeps Statistics as a third panel.
-Four metric cards, the device/range frame and framed progress totals are retained.
-The previously qualified complete-index statistics, checkpoint preview, Windows
-nested-process-host startup, CSV-lock continuation and compute-window ETA fixes
-remain included. CUDA engines and benchmark measurements are unchanged.
+Prime Gap Scout 1.3.5
+====================
 
-Source:37 regressions including framed-dashboard protection.
-Actual frozen Windows:95-bit8T positions,20,793,232,629 tests,41 reported gaps,
-Start/Pause/Quit/reopen/Resume/complete, original frames and closed Native owners.
-The earlier1.3.3 full range-switch/abrupt-close/diagnostic/CSV-lock qualification
-is retained evidence for the unchanged workflow and ownership code.
-Ubuntu:real frozen ELF terminal navigation; physicalLinuxCUDA/sm120 not asserted.
+Preserves the framed dashboard, its four metric cards, device/range frame,
+Best and Recent tables, bottom cumulative counts and action bar. Adds a third
+Statistics frame with two internal columns: cumulative gap sizes and disjoint
+merit bands. Window fitting respects the monitor work area and selected rows.
+
+Uses the Horizon icon and observes actual core/memory clocks. Start is directly
+available on the Idle dashboard; STARTING appears during initialization.
+
+Optimized cached dispatch covers the full 67–95-bit domain. Logical searches
+continue across bit, high-word and pointwise retention-threshold boundaries,
+without a general-engine fallback. Auto advances the cutoff in steps of two.
+
+A resident native process retains its CUDA context and allocation between
+physical pieces. Each piece keeps its own durable nonce, committed prefix and
+completion receipt. Command reads and atomic receipt publication tolerate
+transient Windows file-access conflicts; persistent failures stay explicit.
+Pinned release artifacts avoid repeated executable/proof-library hashing;
+mutable checkpoints always receive fresh integrity checks.
+
+Active-work speed/averages exclude initialization and paused time. The existing
+report, restart recovery, locked-export continuation and exact proof checks
+remain supported. Public launchers contain neutral editable defaults.
+
+See VALIDATION.md for actual tests and platform qualification limits. Historical
+benchmark measurements are retained, not presented as new speed records.
+Versions 1.3.3 and 1.3.4 remain withdrawn.

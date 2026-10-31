@@ -38,7 +38,9 @@ POLICY_ID = "ADAPTIVE_INTEGER_67_95"
 
 def _sha(value):
     return (
-        hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode())
+        hashlib.sha256(
+            json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+        )
         .hexdigest()
         .upper()
     )
@@ -55,12 +57,29 @@ def requested(value):
     return n
 
 
-def pin_range(start, end, value="auto", count_override=None, detail_override=None):
+def pin_range(
+    start,
+    end,
+    value="auto",
+    count_override=None,
+    detail_override=None,
+    *,
+    policy_id=None,
+):
+    if policy_id == "POINTWISE_RETAINED_MERIT_20_5":
+        from pgn_threshold_pointwise import pin_range as pointwise_pin
+
+        return pointwise_pin(start, end, value, count_override, detail_override)
+    if policy_id not in (None, POLICY_ID):
+        raise ValueError("Unknown threshold policy")
     start, end = int(start), int(end)
     if not start < end:
         raise ValueError("Increasing range required")
     value = requested(value)
-    overrides = [requested(x) if x is not None else None for x in (count_override, detail_override)]
+    overrides = [
+        requested(x) if x is not None else None
+        for x in (count_override, detail_override)
+    ]
     if "auto" in overrides:
         raise ValueError("COUNT/DETAIL override is an integer or blank, not Auto")
     segments = []
@@ -100,6 +119,10 @@ def pin_range(start, end, value="auto", count_override=None, detail_override=Non
 
 
 def verify_pin(pin, start=None, end=None):
+    if pin.get("schema") == "PGN_THRESHOLD_POLICY_V2":
+        from pgn_threshold_pointwise import verify_pin as verify_pointwise
+
+        return verify_pointwise(pin, start, end)
     body = dict(pin)
     digest = body.pop("sha256", None)
     if body.get("schema") != "PGN_THRESHOLD_POLICY_V1" or digest != _sha(body):
@@ -108,7 +131,10 @@ def verify_pin(pin, start=None, end=None):
         raise ValueError("Threshold start changed")
     if end is not None and int(body["end"]) != int(end):
         raise ValueError("Threshold end changed")
-    if not isinstance(body.get("segments"), list) or not 1 <= len(body["segments"]) <= 29:
+    if (
+        not isinstance(body.get("segments"), list)
+        or not 1 <= len(body["segments"]) <= 29
+    ):
         raise ValueError("Invalid threshold segment count")
     cursor = int(body["start"])
     for segment in body["segments"]:
@@ -148,7 +174,9 @@ def require_backend_binding(plan, pin, position):
         or plan.get("gap_min") != segment["effective_gap_min"]
         or plan.get("threshold_schema") != "PGN_THRESHOLD_BINDING_V1"
     ):
-        raise ValueError("Native threshold binding is absent or differs from the pinned segment")
+        raise ValueError(
+            "Native threshold binding is absent or differs from the pinned segment"
+        )
     return {
         "schema": "PGN_THRESHOLD_BINDING_V1",
         "policy_sha256": pin["sha256"],
@@ -179,6 +207,7 @@ def view(configuration, start, end, position=None, binding=None):
                 if "detail_gap_requested" in cfg
                 else cfg.get("detail_gap")
             ),
+            policy_id="POINTWISE_RETAINED_MERIT_20_5",
         )
     selected = at_position(pin, start if position is None else position)
     mode = "Auto" if pin["requested"] == "auto" else "Manual"
@@ -198,7 +227,9 @@ def view(configuration, start, end, position=None, binding=None):
         "requested": desired,
         "actual_gap_min": actual,
         "actual_label": (
-            f"Worker >= {actual}" if actual is not None else "Worker threshold: not bound"
+            f"Worker >= {actual}"
+            if actual is not None
+            else "Worker threshold: not bound"
         ),
         "segment_count": len(pin["segments"]),
         "bits": selected["bits"],

@@ -2,15 +2,16 @@
 
 from pgn_launcher import DEFAULTS, BOOLS, validate_coverage
 from pgn_output import default_output_base
+from pgn_threshold_pointwise import MINIMUM_GAP
 
 BOUNDS = {
     "gpu": "integer 0 or greater; choose a visible index from List GPUs",
-    "start": "exact67..95-bit integer; Native plan also checks class30 origin, one low64 window and halo",
+    "start": "exact67..95-bit integer; work automatically crosses bit and threshold boundaries",
     "length": "positive exact integer; mutually exclusive with END",
     "end": "exclusive67..95-bit endpoint; mutually exclusive with LENGTH",
-    "min_gap": "Auto or integer954..2147483647",
-    "count_gap": "blank inherits per-segment policy, or integer954..2147483647",
-    "detail_gap": "blank inherits per-segment policy, or integer954..2147483647",
+    "min_gap": f"Auto or integer{MINIMUM_GAP}..2147483647",
+    "count_gap": f"blank inherits local policy, or integer{MINIMUM_GAP}..2147483647",
+    "detail_gap": f"blank inherits local policy, or integer{MINIMUM_GAP}..2147483647",
     "display_rows": "integer10..30; BOTH Best and Recent, independent of reports",
     "bins": "integer 1..1000000",
     "report_top": "integer 1..1000000",
@@ -34,10 +35,10 @@ EXAMPLES = {
     "report_top": "100",
     "target_merit": "32",
     "chunk_length": "2e12",
-    "output": "D:/PGN-results or /home/robert/PGN-results",
+    "output": "D:/PGN-results or /home/user/PGN-results",
     "resume": "results/<actual-session-folder>",
     "worker": "bin/pgn68-worker-sm120-k64",
-    "name": "Robert",
+    "name": "Researcher",
     "profile": "auto",
 }
 
@@ -61,7 +62,9 @@ def description(name, action):
             else BOUNDS.get(name, "local text")
         )
     )
-    example = EXAMPLES.get(name, "1 to enable, 0 to disable" if name in BOOLS else default)
+    example = EXAMPLES.get(
+        name, "1 to enable, 0 to disable" if name in BOOLS else default
+    )
     scope = (
         " Queue inherits the running process logging/mode flags; Start now or Save launcher applies this setting."
         if name in BOOLS or name == "worker"
@@ -88,7 +91,9 @@ def placeholder(name, values):
             from decimal import Decimal
             from pgn_ui_views import sci
 
-            end = int(Decimal(values["START"])) + int(Decimal(values.get("LENGTH") or "1e15"))
+            end = int(Decimal(values["START"])) + int(
+                Decimal(values.get("LENGTH") or "1e15")
+            )
             return "blank → " + sci(end) + " (AUTO)"
         except (ValueError, ArithmeticError, KeyError):
             return "blank → AUTO from START + LENGTH"
@@ -105,6 +110,9 @@ def validate_descriptions(parser):
     actions = validate_coverage(parser)
     for name, action in actions.items():
         text = description(name, action)
-        if not all(token in text for token in ("Role:", "Default:", "Choices/bounds:", "Example:")):
+        if not all(
+            token in text
+            for token in ("Role:", "Default:", "Choices/bounds:", "Example:")
+        ):
             raise ValueError(name)
     return actions

@@ -213,7 +213,8 @@ def render(state, width=110, height=30):
     proportion = min(1.0, max(0.0, completed / total)) if total else 0.0
     from pgn_compute_eta import forecast_seconds
     eta = forecast_seconds(state)
-    status = safe(state.get("status", "READY"))
+    from pgn_ui_workflow import starting_requested
+    status = "STARTING" if starting_requested(state) else safe(state.get("status", "READY"))
     color = (
         "green"
         if status in ("SEARCHING", "COMPLETE")
@@ -441,16 +442,43 @@ def render(state, width=110, height=30):
             [threshold] + [n for n in range(first_bin, first_bin + 600, 100) if n > threshold]},
             merit_band_counts={}, at_or_above_target=0, statistics_target=target_merit)
     stat_rows = statistics_rows(statistics, target_merit) if statistics else []
-    stats_table = Table.grid(expand=True, padding=(0, 1))
-    stats_table.add_column(ratio=1, no_wrap=True)
-    stats_table.add_column(justify="right", no_wrap=True)
-    for label, count, section in stat_rows:
-        stats_table.add_row(Text(label, style="bold cyan" if section else "white"),
-                            Text("" if section else number(count), style="bold cyan"))
-    if not statistics:
+    def statistic_grid(rows):
+        table = Table.grid(expand=True, padding=(0, 1))
+        table.add_column(ratio=1, no_wrap=True)
+        table.add_column(justify="right", no_wrap=True)
+        for label, count, section in rows:
+            table.add_row(Text(label, style="bold cyan" if section else "white"),
+                          Text("" if section else number(count), style="bold cyan"))
+        return table
+
+    stats_table = statistic_grid(stat_rows)
+    stats_min = len(stat_rows) + 2 if stat_rows else 3
+    if statistics:
+        split = next(i for i, row in enumerate(stat_rows) if row[0] == "MERIT · bands")
+        gap_rows, merit_rows = stat_rows[:split], stat_rows[split:]
+        gap_rows = [("GAP SIZE · ≥",None,True),gap_rows[0],*gap_rows[2:]]
+        # Small histograms show individual bands, including zeroes. Large target
+        # spans keep the existing exact compressed presentation.
+        bands = statistics.get("merit_band_counts")
+        first_band = min((int(k) for k, value in (bands or {}).items() if value),
+                         default=min(20, math.ceil(target_merit)-1))
+        if bands is not None and math.ceil(target_merit)-first_band <= 64:
+            merit_rows = [("MERIT · bands", None, True)] + [
+                (f"[{band:g}, {min(band+1, target_merit):g})", bands.get(str(band), bands.get(band, 0)), False)
+                for band in range(first_band, math.ceil(target_merit))
+            ] + [(f"m ≥ {target_merit:g}", statistics["at_or_above_target"], False)]
+        # Statistics always has two internal columns, including the empty Idle
+        # projection. Section headings have no count cell; charging an extra
+        # placeholder for them previously disabled this layout at its own
+        # admitted three-panel width.
+        stats_table = Table.grid(expand=True,padding=0)
+        stats_table.add_column(ratio=1);stats_table.add_column(width=2);stats_table.add_column(ratio=1)
+        stats_table.add_row(statistic_grid(gap_rows),"",statistic_grid(merit_rows))
+        stats_min = max(len(gap_rows),len(merit_rows)) + 2
+    else:
         stats_table.add_row(str(state.get("statistics_notice", "Statistics unavailable")), "—")
     footer_height = 3
-    counter_height = 3
+    counter_height = 4
     fixed = (
         header_height
         + card_height * (4 // columns)
@@ -463,13 +491,13 @@ def render(state, width=110, height=30):
     result_limit = display_rows(state.get("display_rows", 10))
     # Keep exact prime coordinates legible. Narrow terminals stack the panels;
     # they never silently shorten scientific results to an ambiguous prefix.
-    three_column_width = 2 * (len(str(end or start or 10**20)) + 24) + 36
+    three_column_width = 3 * (len(str(end or start or 10**20)) + 24) + 4
     side_by_side = width >= three_column_width
     table_min = result_limit + (3 if tight else 5)
-    stats_min = len(stat_rows) + 2 if stat_rows else 3
     result_min = max(table_min, stats_min) if side_by_side else table_min * 2 + stats_min
-    result_height = max(result_min, height - fixed)
-    panel_height = result_height if side_by_side else max(table_min, result_height // 2)
+    result_height = result_min
+    content_height = fixed + result_height
+    panel_height = result_height if side_by_side else table_min
     best = sorted(display_records, key=lambda r: (-r[0], r[2]))[:result_limit]
     latest = list(reversed(display_records[-result_limit:]))
     goal_label = f"{target_merit:g}"
@@ -499,18 +527,27 @@ def render(state, width=110, height=30):
         padding=(0, 1),
     )
     if side_by_side:
-        results = Table.grid(expand=True, padding=(0, 1))
-        result_width = (width - 36) // 2
-        results.add_column(width=result_width)
-        results.add_column(width=width - 36 - result_width)
-        results.add_column(width=30)
+        results = Table.grid(expand=True, padding=0)
+        # Share the available width equally. Statistics is a first-class panel,
+        # not a fixed narrow sidebar. The admission width preserves full primes.
+        panel_width, extra = divmod(width - 4, 3)
+        for column in range(3):
+            if column:
+                results.add_column(width=2)
+            results.add_column(width=panel_width + (column < extra))
         statistics_panel = Panel(stats_table, title="STATISTICS", height=panel_height,
-            title_align="left", border_style=MUTED, box=box.ROUNDED, padding=(0, 0))
-        results.add_row(best_panel, recent, statistics_panel)
+            title_align="left", border_style=MUTED, box=box.ROUNDED, padding=(0, 1))
+        results.add_row(best_panel, "", recent, "", statistics_panel)
     else:
         panel_height = table_min
         best_panel.height = recent.height = panel_height
         results = Group(best_panel, recent, Panel(stats_table, title="STATISTICS", height=stats_min))
+    # Idle previews expose the complete saved projection to both result panels.
+    # Never reconstruct lower cumulative counts from the bounded Best/Recent rows.
+    if statistics and statistics.get("threshold_counts") is not None:
+        state = dict(state, gap_threshold_counts=statistics["threshold_counts"])
+    show_bins = True
+    compact_counts = height < 34
     counters = Table.grid(expand=True, padding=(0, 1))
     counters.add_column(ratio=2)
     counters.add_column(ratio=1)
@@ -523,9 +560,37 @@ def render(state, width=110, height=30):
         ),
         Text.assemble(("Tests ", "white"), (compact_number(tests), "bold cyan")),
     )
+    counts_body = counters
+    if show_bins:
+        bins = Table.grid(expand=True, padding=(0, 1))
+        first_bin = ((threshold + 99) // 100) * 100
+        thresholds = [threshold] + [
+            bound for bound in range(first_bin, first_bin + 600, 100) if bound > threshold
+        ]
+        for _ in thresholds:
+            bins.add_column(ratio=1, justify="center")
+        exact_counts = state.get("gap_threshold_counts")
+
+        def count_at(bound):
+            if exact_counts is not None:
+                value = exact_counts.get(str(bound), exact_counts.get(bound))
+                # A bounded top/recent view cannot reconstruct cumulative
+                # counts. Keep missing metadata visibly unknown.
+                return _int(value)
+            return gap_count if bound == threshold else sum(r[0] >= bound for r in records)
+
+        bins.add_row(
+            *(
+                Text.assemble(
+                    ("≥" + str(bound) + " ", "white"), (number(count_at(bound)), "bold cyan")
+                )
+                for bound in thresholds
+            )
+        )
+        counts_body = Group(counters, bins)
     counts = Panel(
-        counters,
-        title="RANGE PROGRESS",
+        counts_body,
+        title="CUMULATIVE COUNTS",
         title_align="left",
         border_style=MUTED,
         box=box.ROUNDED,
@@ -548,7 +613,8 @@ def render(state, width=110, height=30):
         if key not in ("ESC", "p", primary_control["key"])
     ]
     buttons.insert(0, primary_control)
-    footer, button_height, button_regions, _ = _footer(buttons, width, height, include_back=False)
+    fits = width >= 66 and height >= content_height
+    footer, button_height, button_regions, _ = _footer(buttons, width, content_height if fits else height, include_back=False)
     assert button_height == 3
     if width < 66 or height < fixed + result_min:
         notice = Panel(
@@ -566,6 +632,9 @@ def render(state, width=110, height=30):
             Layout(footer, size=footer_height),
         )
         layout.pgn_hit_regions = button_regions
+        layout.pgn_requested_height = content_height
+        layout.pgn_requested_width = three_column_width
+        layout.pgn_content_height = height
         return layout
     layout = Layout()
     layout.split_column(
@@ -577,4 +646,7 @@ def render(state, width=110, height=30):
         Layout(footer, size=footer_height),
     )
     layout.pgn_hit_regions = button_regions
+    layout.pgn_requested_height = content_height
+    layout.pgn_requested_width = three_column_width
+    layout.pgn_content_height = content_height
     return layout

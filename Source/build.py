@@ -91,9 +91,12 @@ def build(archs):
     bins.mkdir(exist_ok=True)
     flags = [
         "-O3",
+        "-DNDEBUG",
         "--std=c++17",
         "--threads",
         "1",
+        "--split-compile",
+        "4",
         "-lineinfo",
         "-dlto",
         "-rdc=true",
@@ -104,12 +107,12 @@ def build(archs):
         "-DPGN_DESCRIPTOR_LANES=2",
         "-DPGN_DESCRIPTOR_BLOCKS=64",
         "-DPGN_EULER96_LAZY",
+        "-DPGN_EULER96",
+        "-DPGN_EULER96_FIXED_HIGH10",
         "-DPGN_PRESIEVE_GROUPS=1",
         "-DPGN_MARK_FULL_FAST",
         "-DPGN_MARK_BANK_ROTATE",
         "-DPGN_FUSED_SIEVE",
-        "-DPGN_EULER96",
-        "-DPGN_EULER96_FIXED_HIGH10",
         "-DPGN_VERIFY_GAPS",
     ]
     completed = []
@@ -141,6 +144,7 @@ def build(archs):
                 shutil.copyfile(output, target)
             sidecar = {
                 "schema": "PGN_NATIVE_MODULE_METADATA_V1",
+                "resident_job_schema": "SCOUT_RESIDENT_JOB_V1",
                 "image_sha256": image_sha,
                 "source_manifest_sha256": source_sha,
                 "gap_runtime_schema": "PGN_NATIVE_GAP_RUNTIME_V1",
@@ -212,6 +216,10 @@ def package():
         "--add-data",
         str(FRONTEND / "data/diagnostic") + separator + "data/diagnostic",
     ]
+    icon = FRONTEND / "data/horizon.ico"
+    args += ["--add-data", str(icon) + separator + "data"]
+    if os.name == "nt":
+        args += ["--icon", str(icon)]
     for path in FRONTEND.glob("*.py"):
         if path.name != "pgn68.py":
             args += ["--hidden-import", path.stem]

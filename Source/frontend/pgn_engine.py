@@ -20,11 +20,25 @@ from types import SimpleNamespace
 
 from pgn_menu import menu, read_key, final_screen_text, file_menu
 from pgn_output import files_context, write_index_counts
-from pgn_plan import choose_plan, query_plan, query_endpoints
-from pgn_native_contract import PROTOCOL, require_new_configuration, module_metadata
+from pgn_plan import choose_plan, query_plan
+from pgn_native_contract import (
+    PROTOCOL,
+    require_new_configuration,
+    module_metadata,
+    piece_fields,
+)
+from pgn_work_pieces import next_piece
+from pgn_threshold_policy import at_position
+from pgn_exact_prefix import certify
 from pgn_session import SessionStore, atomic_bytes, file_hash
 from pgn_owned import create_owned
-from pgn_queue import enqueue_next, pending_ranges, queue_tail_end, update_pending, remove_pending
+from pgn_queue import (
+    enqueue_next,
+    pending_ranges,
+    queue_tail_end,
+    update_pending,
+    remove_pending,
+)
 from pgn_ui_service import MenuService
 from pgn_developer_diag import DeveloperRecorder
 from pgn_gpu_monitor import GpuClockMonitor
@@ -120,12 +134,48 @@ def original_emission_floor(store, args):
                 + name
             )
     floor = store.original_floor
-    if not 954 <= floor <= 2147483647:
+    if not 30 <= floor <= 2147483647:
         raise ValueError("Invalid durable original emission floor")
     return floor
 
 
+def retire_replaced_worker(store, worker, checkpoint, close_boundary):
+    """Keep committed science while replacing an obsolete executable binding.
+
+    The old executable is never launched. Its acknowledged checkpoint only
+    identifies the preserved prefix; the next child receives a fresh input.
+    Call after owner recovery and resolution of the installed replacement.
+    Its physical plan is admitted before any new native child is launched.
+    """
+    chunk = store.meta.get("current_chunk")
+    if not chunk or file_hash(worker) == chunk["identity"]["worker_sha256"]:
+        return False
+    instance = chunk.get("instance") or {}
+    if instance and not instance.get("closed"):
+        raise ValueError(
+            "The previous Native owner must be closed before a worker update"
+        )
+    position, tests = store.restore_checkpoint(checkpoint)
+    identity = chunk["identity"]
+    frontier = (identity["base_positions"] + position, identity["base_tests"] + tests)
+    if frontier != (store.meta["positions"], store.meta["tests"]):
+        store.recovery_rewind(*frontier)
+    if chunk.get("trusted_checkpoint") is not None:
+        close_boundary(int(identity["start"]) + position)
+        store.retire_closed_prefix(position, tests)
+    else:
+        store.retire_unstarted_chunk()
+    return True
+
+
 def run(store, args, device, environment, gpu_info, api):
+    from pgn_artifact_lease import ArtifactLease
+
+    with ArtifactLease():
+        return _run(store, args, device, environment, gpu_info, api)
+
+
+def _run(store, args, device, environment, gpu_info, api):
     original_floor = original_emission_floor(store, args)
     folder = store.folder
     config = store.meta["configuration"]
@@ -141,7 +191,8 @@ def run(store, args, device, environment, gpu_info, api):
     from pgn_publications import PublicationQueue, WorkRates
 
     work_rates = WorkRates()
-    status = "PREPARING"
+    rate_identity = None
+    status = "STARTING"
     failure = None
     startup_error = None
     dashboard = api.Dashboard()
@@ -171,23 +222,39 @@ def run(store, args, device, environment, gpu_info, api):
     suppress_auto_next = False
     unknown_current_wall = False
     checked_this_process = set()
+    from pgn_resident import Manager as ResidentManager
+    resident = ResidentManager(api, folder, device["uuid"], getattr(api,"create_owned",create_owned))
     eta_worker_paths = {}
     for eta_k in (8, 16, 32, 64):
         try:
             eta_worker_paths[str(eta_k)] = str(
-                api.resolve_worker(None, f"sm{device['cc_major']}{device['cc_minor']}", eta_k)
+                api.resolve_worker(
+                    None, f"sm{device['cc_major']}{device['cc_minor']}", eta_k
+                )
             )
         except RuntimeError:
             pass
-    report = folder / f"GapReport_details_ge{args.detail_gap}.txt"
+    report = folder / (
+        "GapReport_details_policy.txt"
+        if records.projection.detail_dynamic
+        else f"GapReport_details_ge{args.detail_gap}.txt"
+    )
     telemetry = api.Telemetry(folder, device["uuid"], True) if args.telemetry else None
     clock_monitor = None
     summary = (folder / "summary.log").open("a", encoding="utf-8")
+
     def export_notice(text):
         summary.write((text or "Deferred reports published") + "\n")
         summary.flush()
-    exports = DerivedExports(getattr(api, "atomic_export_text", api.atomic_text), export_notice)
-    debug = (folder / "native-debug.log").open("a", encoding="utf-8") if args.debug else None
+
+    exports = DerivedExports(
+        getattr(api, "atomic_export_text", api.atomic_text), export_notice
+    )
+    debug = (
+        (folder / "native-debug.log").open("a", encoding="utf-8")
+        if args.debug
+        else None
+    )
 
     view_cache = {}
     cache_warning_seen = None
@@ -196,13 +263,14 @@ def run(store, args, device, environment, gpu_info, api):
         key = (position, store.sequence, args.display_rows)
         if view_cache.get("key") != key:
             below = start + position
-            best = records.top(args.count_gap, below, args.display_rows)
-            recent = records.recent(args.count_gap, below, args.display_rows)
+            best = records.policy_top("count", below, args.display_rows)
+            recent = records.policy_recent("count", below, args.display_rows)
             recent_lows = {r[2] for r in recent}
             view_cache.update(
                 key=key,
-                count=records.count_rows(args.count_gap, below),
-                rows=[r for r in best if r[2] not in recent_lows] + list(reversed(recent)),
+                count=records.policy_count("count", below),
+                rows=[r for r in best if r[2] not in recent_lows]
+                + list(reversed(recent)),
             )
         return view_cache
 
@@ -213,7 +281,11 @@ def run(store, args, device, environment, gpu_info, api):
                 gpu_uuid=device["uuid"],
                 worker_sha256=identity["worker_sha256"],
                 profile_k=identity["profile_k"],
-                configuration=config,
+                configuration=dict(
+                    config,
+                    start=identity["start"],
+                    end=str(int(identity["start"]) + int(identity["length"])),
+                ),
                 positions=native_position - initial_native_position,
                 seconds=clock.elapsed(),
                 observed_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -247,7 +319,9 @@ def run(store, args, device, environment, gpu_info, api):
             "native_plan": (store.meta.get("current_chunk") or {}).get("plan"),
             "native_resources": getattr(api, "native_resources", None),
             "worker_active_seconds": (
-                None if unknown_current_wall else active + (clock.elapsed() if clock else 0)
+                None
+                if unknown_current_wall
+                else active + (clock.elapsed() if clock else 0)
             ),
             "rate_positions": rate_positions if rate_unknown else position,
             "rate_scope": "SINCE_RESUME" if rate_unknown else "ACTIVE_WORKER_WALL",
@@ -294,7 +368,9 @@ def run(store, args, device, environment, gpu_info, api):
             "queued_ranges": pending_ranges(store),
             "queue_tail_end": queue_tail_end(store),
             "global_defaults": dict(
-                ui_state.get("global_defaults_override", getattr(api, "_global_defaults", {}))
+                ui_state.get(
+                    "global_defaults_override", getattr(api, "_global_defaults", {})
+                )
             ),
             "_ui_state": ui_state,
             "_parser_factory": getattr(api, "argument_parser", None),
@@ -348,7 +424,9 @@ def run(store, args, device, environment, gpu_info, api):
                 "tests": tests,
                 "elapsed": None if unknown_current_wall else elapsed,
                 "rate": (
-                    None if unknown_current_wall else numerator / elapsed if elapsed > 0 else None
+                    None
+                    if unknown_current_wall
+                    else numerator / elapsed if elapsed > 0 else None
                 ),
                 "paused_seconds": paused,
                 "timing_unknown": unknown_current_wall,
@@ -357,12 +435,17 @@ def run(store, args, device, environment, gpu_info, api):
                     if rate_unknown
                     else "active worker wall, initialization included"
                 ),
-                "minimum_gap": args.count_gap,
-                "detailed_min_gap": args.detail_gap,
+                "minimum_gap": at_position(pin, min(start + position, end - 1))[
+                    "count_gap"
+                ],
+                "detailed_min_gap": at_position(pin, min(start + position, end - 1))[
+                    "detail_gap"
+                ],
                 "gap_count": ui_view()["count"],
                 "range_statistics": statistics_state(records.projection.value),
                 "gap_threshold_counts": {
-                    int(k): v for k, v in records.projection.value["threshold_counts"].items()
+                    int(k): v
+                    for k, v in records.projection.value["threshold_counts"].items()
                 },
                 "gaps": ui_view()["rows"],
                 "configuration": dict(config),
@@ -373,9 +456,13 @@ def run(store, args, device, environment, gpu_info, api):
                 "display_rows": args.display_rows,
                 "target_merit": args.target_merit,
                 "outputfile": str(report),
-                "clock_sm_mhz": clock_monitor.snapshot().get("sm_mhz") if clock_monitor else None,
+                "clock_sm_mhz": (
+                    clock_monitor.snapshot().get("sm_mhz") if clock_monitor else None
+                ),
                 "clock_mem_mhz": (
-                    clock_monitor.snapshot().get("memory_mhz") if clock_monitor else None
+                    clock_monitor.snapshot().get("memory_mhz")
+                    if clock_monitor
+                    else None
                 ),
                 "queued_next": store.meta.get("next_range"),
                 **work_rates.view(),
@@ -383,18 +470,21 @@ def run(store, args, device, environment, gpu_info, api):
                     "M menu | F files | Q quit"
                     if status == "COMPLETE"
                     else "P pause/resume | M menu | F files | Q safe quit"
-                ) + (" | " + exports.notice if exports.notice else ""),
+                )
+                + (" | " + exports.notice if exports.notice else ""),
             },
             force=force,
         )
 
     def outputs():
         below = start + position
-        count_total = records.count_rows(args.count_gap, below)
-        detail_total = records.count_rows(args.detail_gap, below)
-        detail_rows = records.top(args.detail_gap, below, args.report_top)
+        count_total = records.policy_count("count", below)
+        detail_total = records.policy_count("detail", below)
+        detail_rows = records.policy_top("detail", below, args.report_top)
         args._detail_total_count = detail_total
-        files = write_index_counts(folder, args, end, position, status, records, exports.write)
+        files = write_index_counts(
+            folder, args, end, position, status, records, exports.write
+        )
         report_text = api.brian_report(
             args.name,
             started,
@@ -414,14 +504,17 @@ def run(store, args, device, environment, gpu_info, api):
         elif rate_unknown:
             report_text += "\nTiming note: historical crash wall is UNKNOWN; displayed active time/rates are since this resume only, replay included.\n"
         exports.write(report, report_text)
-        screen = final_screen_text(context()) + "\nBEST / COUNTED GAPS\nGAP MERIT LOWER_PRIME\n"
+        screen = (
+            final_screen_text(context())
+            + "\nBEST / COUNTED GAPS\nGAP MERIT LOWER_PRIME\n"
+        )
         screen += "".join(
             f"{g} {m:.4f} {n}\n"
-            for g, m, n in records.top(args.count_gap, below, args.display_rows)
+            for g, m, n in records.policy_top("count", below, args.display_rows)
         )
         screen += "\nRECENT GAPS\n" + "".join(
             f"{g} {m:.4f} {n}\n"
-            for g, m, n in records.recent(args.count_gap, below, args.display_rows)
+            for g, m, n in records.policy_recent("count", below, args.display_rows)
         )
         exports.write(folder / "finalscreen.txt", screen)
         api.atomic_text(
@@ -461,7 +554,9 @@ def run(store, args, device, environment, gpu_info, api):
         store.record_gap(lower, upper, source)
 
     def save_next(action):
-        check = None  # Prepared queue; actual Native threshold binding is checked at Start.
+        check = (
+            None  # Prepared queue; actual Native threshold binding is checked at Start.
+        )
         select_uuid = (
             (lambda index: api.select_gpu(gpu_info["devices"], index)[0]["uuid"])
             if isinstance(gpu_info.get("devices"), list)
@@ -485,8 +580,10 @@ def run(store, args, device, environment, gpu_info, api):
         if processed_end <= start:
             return
         low, high = api.final_boundary_pair(processed_end)
-        if low >= start and high - low >= min(args.count_gap, args.detail_gap):
-            add_gap(low, high, "exact_CPU_boundary")
+        if start <= low < end:
+            local = at_position(pin, low)
+            if high - low >= min(local["count_gap"], local["detail_gap"]):
+                add_gap(low, high, "exact_CPU_boundary")
 
     def release_menu_terminal():
         nonlocal dashboard, keys, ui_keys_released
@@ -540,7 +637,12 @@ def run(store, args, device, environment, gpu_info, api):
     def stop_developer(restore_normal=True):
         nonlocal telemetry
         state = developer.stop(context())
-        if restore_normal and args.telemetry and not state["recording"] and telemetry is None:
+        if (
+            restore_normal
+            and args.telemetry
+            and not state["recording"]
+            and telemetry is None
+        ):
             sample_folder = folder / ("telemetry-" + str(time.time_ns()))
             sample_folder.mkdir(exist_ok=False)
             telemetry = api.Telemetry(sample_folder, device["uuid"], True)
@@ -557,7 +659,9 @@ def run(store, args, device, environment, gpu_info, api):
             if action.kind in ("diagnostic_start", "diagnostic_stop"):
                 try:
                     state = (
-                        start_developer() if action.kind == "diagnostic_start" else stop_developer()
+                        start_developer()
+                        if action.kind == "diagnostic_start"
+                        else stop_developer()
                     )
                     ui.respond(
                         request,
@@ -583,7 +687,9 @@ def run(store, args, device, environment, gpu_info, api):
             elif action.kind in ("queue", "queue_edit", "queue_delete"):
                 if drain is not None or (process is not None and intent is not None):
                     ui.respond(
-                        request, ok=False, message="A safe session transition is already pending."
+                        request,
+                        ok=False,
+                        message="A safe session transition is already pending.",
                     )
                     continue
                 try:
@@ -617,7 +723,9 @@ def run(store, args, device, environment, gpu_info, api):
                 )
             else:
                 ui.respond(
-                    request, ok=False, message="A safe session transition is already pending."
+                    request,
+                    ok=False,
+                    message="A safe session transition is already pending.",
                 )
         return drain
 
@@ -669,25 +777,48 @@ def run(store, args, device, environment, gpu_info, api):
                 tests = int(store.meta["tests"])
 
     def select_chunk():
+        nonlocal position, tests, effective
         chunk = store.meta.get("current_chunk")
+        if chunk:
+            installed = profile_candidates(args, device, api)
+            replacement = next(
+                (
+                    worker
+                    for k, worker in installed
+                    if k == chunk["identity"]["profile_k"]
+                ),
+                installed[0][1],
+            )
+            if retire_replaced_worker(store, replacement, native_checkpoint, boundary):
+                position, tests = int(store.meta["positions"]), int(store.meta["tests"])
+                chunk = None
         if (
             chunk
             and (chunk.get("instance") or {}).get("closed")
             and chunk.get("trusted_checkpoint")
             and int(chunk["identity"]["length"]) > 64 * 10**12
         ):
-            native_prefix, native_prefix_tests = store.restore_checkpoint(native_checkpoint)
+            native_prefix, native_prefix_tests = store.restore_checkpoint(
+                native_checkpoint
+            )
             boundary(int(chunk["identity"]["start"]) + native_prefix)
             store.retire_closed_prefix(native_prefix, native_prefix_tests)
             chunk = None
         if chunk:
             identity = chunk["identity"]
-            # Serialized paths do not grant permission to execute an arbitrary
-            # file. Re-resolve only the installed/package K-profile and hash it.
-            trusted = api.resolve_checkpoint_worker(
-                identity, f"sm{device['cc_major']}{device['cc_minor']}", identity["profile_k"]
+            local = piece_fields(
+                pin,
+                int(identity["start"]),
+                int(identity["start"]) + int(identity["length"]),
             )
-            store.trusted_worker_path(trusted)
+            effective = local["effective_gap_min"]
+            if int(identity["gap_min"]) != effective:
+                raise ValueError(
+                    "Saved native child threshold differs from its pinned position"
+                )
+            # Only profile_candidates resolves the installed/explicit current
+            # image. A serialized old path never authorizes its execution.
+            store.trusted_worker_path(replacement)
             checked = query_plan(
                 identity["worker"],
                 int(identity["start"]),
@@ -696,6 +827,7 @@ def run(store, args, device, environment, gpu_info, api):
                 api.child_options(),
                 identity["gap_min"],
                 pin,
+                plan_provider=resident.query,
             )
             if (
                 not checked.get("range_valid")
@@ -714,18 +846,23 @@ def run(store, args, device, environment, gpu_info, api):
             store.save()
             return chunk
         remaining = total - position
-        probe = min(
-            remaining,
-            64 * 10**12,
-            (4194304 - 2) * 1006632960,
-            int(pin["segments"][0]["end"]) - (start + position),
-            (1 << 64) - ((start + position) & ((1 << 64) - 1)),
-        )
+        limit = min(remaining, 64 * 10**12, (4194304 - 2) * 1006632960)
         if args.chunk_length is not None:
-            probe = min(probe, args.chunk_length)
+            limit = min(limit, args.chunk_length)
+        piece = next_piece(pin, start + position, limit)
+        effective = piece.minimum_gap
+        if piece.kind == "exact_short_prefix":
+            certificate = certify(piece, api.final_boundary_pair)
+            store.complete_exact_prefix(piece, certificate, api.final_boundary_pair)
+            position = int(store.meta["positions"])
+            tests = int(store.meta["tests"])
+            publish(True)
+            return None
+        probe = piece.end - piece.start
         candidates = profile_candidates(args, device, api)
         query = lambda worker, first, length: query_plan(
-            worker, first, length, environment, api.child_options(), effective, pin
+            worker, first, length, environment, api.child_options(), effective, pin,
+            plan_provider=resident.query,
         )
         if candidates and candidates[0][0] is None:
             first_plan = query(candidates[0][1], start + position, probe)
@@ -768,18 +905,27 @@ def run(store, args, device, environment, gpu_info, api):
             tests = identity["base_tests"] + restore_tests
             if (position, tests) != (store.meta["positions"], store.meta["tests"]):
                 store.recovery_rewind(position, tests, unknown_wall=rate_unknown)
-        # Both endpoints are checked by Native without search allocations.
-        endpoints = profile_candidates(args, device, api)
-        checker = endpoints[0][1]
-        last = query_endpoints(checker, config, environment, api.child_options())
+        # Every physical child is admitted by select_chunk immediately before
+        # launch. Probing distant logical endpoints here repeats Driver setup
+        # and cannot reserve the memory that will be available at those points.
         while position < total or store.meta.get("current_chunk"):
+            status = "SEARCHING" if resident.resident is not None else "STARTING"
+            publish(True)
             chunk = select_chunk()
+            if chunk is None:
+                continue
             identity = chunk["identity"]
-            if getattr(args, "_confirm_plan", False) and not args.headless and sys.stdin.isatty():
+            if (
+                getattr(args, "_confirm_plan", False)
+                and not args.headless
+                and sys.stdin.isatty()
+            ):
                 print(
                     f"Range {start} -> {end}; {total} positions. ETA requires measured throughput; no estimate is invented."
                 )
-                print("Press1 to start this planned range, or0 to return without launch.")
+                print(
+                    "Press1 to start this planned range, or0 to return without launch."
+                )
                 if read_key("01") == "0":
                     status = "PREPARED"
                     next_action = SimpleNamespace(kind="return", values={})
@@ -796,7 +942,9 @@ def run(store, args, device, environment, gpu_info, api):
             ):
                 raise ValueError("Frozen threshold binding changed")
             if identity.get("emit_min_gap") != original_floor:
-                raise ValueError("Checkpoint/chunk original emission-floor binding changed")
+                raise ValueError(
+                    "Checkpoint/chunk original emission-floor binding changed"
+                )
             command = [
                 identity["worker"],
                 "--engine",
@@ -825,7 +973,10 @@ def run(store, args, device, environment, gpu_info, api):
                     paid[identity["worker_sha256"]] = {"status": "SKIPPED_USER"}
                 else:
                     diag = folder / (
-                        "self-test-" + identity["worker_sha256"][:12] + "-" + str(time.time_ns())
+                        "self-test-"
+                        + identity["worker_sha256"][:12]
+                        + "-"
+                        + str(time.time_ns())
                     )
                     paid[identity["worker_sha256"]] = api.run_diagnostic(
                         Path(identity["worker"]), environment, diag
@@ -835,11 +986,11 @@ def run(store, args, device, environment, gpu_info, api):
             store.before_launch()
             before = time.monotonic()
             utc = dt.datetime.now(dt.timezone.utc)
-            factory = getattr(api, "create_owned", create_owned)
-            process = factory(command, environment, device["uuid"])
-            clock = api.ProcessClock(process, before, utc)
+            process = resident.create(command, environment)
+            clock = process.clock(before,utc,api.ProcessClock)
             birth = getattr(process, "birth", None) or process_birth(process, clock)
-            store.started(process.pid, birth)
+            process._job_birth = str(birth)
+            store.started(process.pid, birth, job_nonce=process.nonce)
             owner_file = folder / "native-owner-current.json"
             api.atomic_text(
                 owner_file,
@@ -853,6 +1004,7 @@ def run(store, args, device, environment, gpu_info, api):
                         "session_id": store.meta["session_id"],
                         "profile_k": identity["profile_k"],
                         "emit_min_gap": original_floor,
+                        "job_nonce": process.nonce,
                     },
                     indent=2,
                 )
@@ -861,7 +1013,14 @@ def run(store, args, device, environment, gpu_info, api):
             process.commit_identity(owner_file)
             process.resume()  # Windows entrypoint cannot reach CUDA before WAL.
             events = PublicationQueue(maxsize=64)
-            work_rates.begin_instance()
+            current_rate_identity = (
+                identity["worker_sha256"], identity["profile_k"],
+                identity["gap_min"], int(identity["start"]) >> 64,
+            )
+            work_rates.begin_piece(
+                preserve_window=not process.first and current_rate_identity == rate_identity
+            )
+            rate_identity = current_rate_identity
             reader_stop = threading.Event()
 
             def enqueue(value):
@@ -902,9 +1061,11 @@ def run(store, args, device, environment, gpu_info, api):
                 finally:
                     watcher_done.set()
 
-            watcher = threading.Thread(target=observe, args=(process, clock), daemon=True)
+            watcher = threading.Thread(
+                target=observe, args=(process, clock), daemon=True
+            )
             watcher.start()
-            status = "STARTING"
+            status = "STARTING" if process.first else "SEARCHING"
             intent = None
             deadline = None
             reader_done = False
@@ -943,12 +1104,20 @@ def run(store, args, device, environment, gpu_info, api):
                         open_live_menu("menu" if key == "m" else "files")
                     elif key == "q" and intent is None:
                         intent = "quit"
-                    elif key == "p" and intent is None and status in ("SEARCHING", "RUNNING"):
+                    elif (
+                        key == "p"
+                        and intent is None
+                        and status in ("SEARCHING", "RUNNING")
+                    ):
                         intent = "pause"
                     if intent is not None and deadline is None:
                         stop_file.write_text(intent + "\n")
                         deadline = time.monotonic() + 90
-                        status = "PAUSING" if intent in ("pause", "switch") else "STOP REQUESTED"
+                        status = (
+                            "PAUSING"
+                            if intent in ("pause", "switch")
+                            else "STOP REQUESTED"
+                        )
                     try:
                         line = events.get(timeout=0.1)
                     except queue.Empty:
@@ -993,19 +1162,27 @@ def run(store, args, device, environment, gpu_info, api):
                                 except (OSError, ValueError) as problem:
                                     store.meta["plan_claim_error"] = str(problem)
                             if (
-                                not native_position <= new_position <= int(identity["length"])
+                                not native_position
+                                <= new_position
+                                <= int(identity["length"])
                                 or new_tests < native_tests
                             ):
                                 raise ValueError("Native counters retreated")
                             rate_positions += new_position - native_position
                             native_position, native_tests = new_position, new_tests
-                            position = max(position, identity["base_positions"] + native_position)
+                            position = max(
+                                position, identity["base_positions"] + native_position
+                            )
                             tests = max(tests, identity["base_tests"] + native_tests)
                             store.accepted_progress(position, tests)
                         if "PGN CUDA" in line or "failed" in line.lower():
                             summary.write(line + "\n")
                             summary.flush()
-                    if deadline and time.monotonic() >= deadline and process.poll() is None:
+                    if (
+                        deadline
+                        and time.monotonic() >= deadline
+                        and process.poll() is None
+                    ):
                         api.terminate_owned(process)
                         raise RuntimeError("Worker did not drain within90 seconds")
                     if time.monotonic() - last_summary >= 10:
@@ -1032,6 +1209,8 @@ def run(store, args, device, environment, gpu_info, api):
             )
             summary.flush()
             process.close()
+            instance_closed = process.process_exited()
+            work_receipt = process.work_receipt() if code == 0 else None
             process = None
             if code:
                 raise RuntimeError(
@@ -1042,7 +1221,11 @@ def run(store, args, device, environment, gpu_info, api):
                 gpu_uuid=device["uuid"],
                 worker_sha256=identity["worker_sha256"],
                 profile_k=identity["profile_k"],
-                configuration=config,
+                configuration=dict(
+                    config,
+                    start=identity["start"],
+                    end=str(int(identity["start"]) + int(identity["length"])),
+                ),
                 positions=native_position - initial_native_position,
                 seconds=duration,
                 observed_utc=ended.isoformat(),
@@ -1050,16 +1233,22 @@ def run(store, args, device, environment, gpu_info, api):
                 closed=True,
                 driver_api=device.get("cuda_driver_api_version"),
             )
-            store.meta["eta_samples"] = retain(store.meta.get("eta_samples", []), closed_eta)
+            store.meta["eta_samples"] = retain(
+                store.meta.get("eta_samples", []), closed_eta
+            )
             boundary(int(identity["start"]) + native_position)
             complete = native_position == int(identity["length"])
             if not complete:
-                store.capture_closed_checkpoint(native_checkpoint, native_position, native_tests)
+                store.capture_closed_checkpoint(
+                    native_checkpoint, native_position, native_tests
+                )
             store.closed(
                 "PAUSED" if not complete else "CHUNK_COMPLETE",
                 active,
                 paused,
                 chunk_complete=complete,
+                instance_closed=instance_closed,
+                work_receipt=work_receipt,
             )
             if complete and position == total:
                 status = "COMPLETE"
@@ -1086,7 +1275,13 @@ def run(store, args, device, environment, gpu_info, api):
                 while True:
                     action = menu_requests()
                     if action:
-                        if action.kind in ("new", "resume", "activate_queued", "quit", "stop"):
+                        if action.kind in (
+                            "new",
+                            "resume",
+                            "activate_queued",
+                            "quit",
+                            "stop",
+                        ):
                             next_action = action
                             close_live_menu()
                             break
@@ -1106,6 +1301,7 @@ def run(store, args, device, environment, gpu_info, api):
                 paused += time.monotonic() - pause_start
                 if next_action:
                     break
+        resident.shutdown()
         if next_action is None and position == total:
             status = "COMPLETE"
             boundary(end)
@@ -1144,8 +1340,7 @@ def run(store, args, device, environment, gpu_info, api):
         status = "FAILED"
         if "reader_stop" in locals():
             reader_stop.set()
-        if process is not None and process.poll() is None:
-            api.terminate_owned(process)
+        resident.shutdown(force=True)
         if clock:
             try:
                 duration, ended = clock.finish()
@@ -1160,8 +1355,11 @@ def run(store, args, device, environment, gpu_info, api):
         if process is not None:
             process.close()
             process = None
+        resident.shutdown(force=True)
         if callable(getattr(api, "remember_start_failure", None)):
-            startup_error = api.remember_start_failure(context(), error, "search worker", folder)
+            startup_error = api.remember_start_failure(
+                context(), error, "search worker", folder
+            )
         else:
             startup_error = {
                 "message": failure,
@@ -1195,10 +1393,12 @@ def run(store, args, device, environment, gpu_info, api):
         api._menu_reopen_entry = "menu"
         if "reader_stop" in locals():
             reader_stop.set()
+        resident.shutdown(force=True)
         if process is not None and process.poll() is None:
             api.terminate_owned(process)
         if process is not None:
             process.close()
+        resident.shutdown(force=True)
         publish(True)
         dashboard.finish()
         keys.__exit__(None, None, None)
@@ -1214,4 +1414,9 @@ def run(store, args, device, environment, gpu_info, api):
                 pass
         if debug:
             debug.close()
-    return {"status": status, "action": next_action, "folder": folder, "failure": failure}
+    return {
+        "status": status,
+        "action": next_action,
+        "folder": folder,
+        "failure": failure,
+    }

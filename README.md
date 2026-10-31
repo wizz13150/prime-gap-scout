@@ -9,12 +9,12 @@ blockchain connection is required.
 
 ## Downloads
 
-**Stable release: [v1.3.2](https://github.com/wizz13150/prime-gap-scout/releases/tag/v1.3.2)**
+**Stable release: [v1.3.5](https://github.com/wizz13150/prime-gap-scout/releases/tag/v1.3.5)**
 
-- [Windows x64](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.2/PrimeGapScout-1.3.2-Windows-x64.zip)
-- [Ubuntu 24.04 x64](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.2/PrimeGapScout-1.3.2-Ubuntu-x64.zip)
-- [Complete package with source and both platforms](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.2/PrimeGapScout-1.3.2-Complete.zip)
-- [SHA-256 checksums](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.2/SHA256SUMS.txt)
+- [Windows x64](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.5/PrimeGapScout-1.3.5-Windows-x64.zip)
+- [Ubuntu 24.04 x64](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.5/PrimeGapScout-1.3.5-Ubuntu-x64.tar.gz)
+- [Complete package with source and both platforms](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.5/PrimeGapScout-1.3.5-Complete.zip)
+- [SHA-256 checksums](https://github.com/wizz13150/prime-gap-scout/releases/download/v1.3.5/SHA256SUMS.txt)
 
 ## Packages and first launch
 
@@ -48,7 +48,16 @@ parsed as an exact integer: `2e20` is exactly `200000000000000000000`.
 Results default to a `results` directory beside the application. Keep the entire
 application directory, including worker metadata and runtime libraries.
 
-## Included fixes in 1.3.2
+## Included fixes in 1.3.5
+
+- One resident cached worker serves consecutive pieces without reloading the CUDA context or buffers.
+- Start and Resume show **STARTING** immediately, including requests made from menus.
+- Best and Recent retain their original frames; the third Statistics frame has two internal columns.
+- The cumulative counts bar remains present. Window fitting covers 10–30 display rows.
+- Windows command reads use a bounded snapshot and completion records use atomic publication.
+- The application icon uses the Horizon artwork.
+
+Earlier startup and recovery fixes are retained:
 
 - GPU identity, VRAM and available clocks appear on Idle, before Start.
 - A fresh Idle screen has a direct **Start** action; saved suspended work has **Resume**.
@@ -64,48 +73,29 @@ GPU pipeline (sieve, walk and verification), without initialization or pause
 time. No clock normalization is applied. 1 Gpos/s = one billion integer
 positions per second.
 
-| Bits | Min gap | GPU throughput (Gpos/s) |
-| ---: | ---: | ---: |
-| 67 | 954 | 1029.20 |
-| 68 | 960 | 1003.52 |
-| 69 | 982 | 984.24 |
-| 70 | 994 | 952.42 |
-| 71 | 1008 | 941.48 |
-| 72 | 1022 | 921.70 |
-| 73 | 1036 | 912.90 |
-| 74 | 1050 | 889.01 |
-| 75 | 1062 | 876.30 |
-| 76 | 1076 | 854.83 |
-| 77 | 1090 | 832.27 |
-| 78 | 1104 | 817.53 |
-| 79 | 1116 | 804.43 |
-| 80 | 1130 | 782.51 |
-| 81 | 1144 | 759.51 |
-| 82 | 1158 | 751.73 |
-| 83 | 1170 | 730.72 |
-| 84 | 1184 | 724.74 |
-| 85 | 1198 | 717.77 |
-| 86 | 1212 | 707.89 |
-| 87 | 1224 | 700.48 |
-| 88 | 1238 | 676.47 |
-| 89 | 1252 | 667.85 |
-| 90 | 1266 | 655.23 |
-| 91 | 1278 | 647.20 |
-| 92 | 1292 | 648.11 |
-| 93 | 1306 | 644.04 |
-| 94 | 1318 | 602.66 |
-| 95 | 1332 | 575.23 |
+| Bits | Min gap | Gpos/s | Bits | Min gap | Gpos/s | Bits | Min gap | Gpos/s |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 67 | 954 | 1029.20 | 77 | 1090 | 832.27 | 87 | 1224 | 700.48 |
+| 68 | 960 | 1003.52 | 78 | 1104 | 817.53 | 88 | 1238 | 676.47 |
+| 69 | 982 | 984.24 | 79 | 1116 | 804.43 | 89 | 1252 | 667.85 |
+| 70 | 994 | 952.42 | 80 | 1130 | 782.51 | 90 | 1266 | 655.23 |
+| 71 | 1008 | 941.48 | 81 | 1144 | 759.51 | 91 | 1278 | 647.20 |
+| 72 | 1022 | 921.70 | 82 | 1158 | 751.73 | 92 | 1292 | 648.11 |
+| 73 | 1036 | 912.90 | 83 | 1170 | 730.72 | 93 | 1306 | 644.04 |
+| 74 | 1050 | 889.01 | 84 | 1184 | 724.74 | 94 | 1318 | 602.66 |
+| 75 | 1062 | 876.30 | 85 | 1198 | 717.77 | 95 | 1332 | 575.23 |
+| 76 | 1076 | 854.83 | 86 | 1212 | 707.89 |  |  |  |
 
 The measured starting integers and GPU elapsed times are in
 [the benchmark data](Docs/BENCHMARKS.json). Results depend on the GPU, clocks,
 cutoff and starting integer; other integers of the same bit width can select
-a different backend. These are retained campaign measurements, not a new benchmark claim for this patch. See [release validation](Docs/VALIDATION.md).
+a different optimized specialization. These are retained campaign measurements, not a new benchmark claim for this patch. See [release validation](Docs/VALIDATION.md).
 
 ## Automatic minimum gap
 
-The integer policy is displayed in forms and the mining dashboard. A session
-pins its policy and effective worker threshold; a later software update does
-not silently change an existing checkpoint's threshold.
+Auto uses the next even gap above `20.5 × ln(p)` at the current integer, rather than a fixed threshold per bit. A logical range is split at every retained-gap transition; the forms and dashboard show the pinned policy. Existing checkpoints keep their original policy.
+
+The following values are the **retained campaign benchmark cutoffs**, matching the measured throughput table. They are not a lookup table for Auto:
 
 | Bits | Minimum gap | Bits | Minimum gap | Bits | Minimum gap |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -130,12 +120,9 @@ congruence is an exact compositeness witness. Reported endpoints use determinist
 MR13 below its strict bound and a bundled FLINT primality proof above that bound;
 a probable-prime screening result alone is not accepted as a proved endpoint.
 
-The public numeric domain is `[2^66, 2^95)`. Native planning also validates the
-class-30 origin, halo, low-64-bit window, descriptor count, and available memory.
-An unsupported boundary crossing is refused with a reason; it is not skipped.
-The total search length is not capped at `1e15`. Optimized literal-high-word
-specializations are included for all 29 retained benchmark profiles. Other
-admitted high words use the general backend.
+The public numeric domain is `[2^66, 2^95)`. Logical ranges may cross bit, minimum-gap and 64-bit-word boundaries. The coordinator splits them into compatible native pieces and certifies the short class-30 alignment fragments exactly. Native planning validates the halo, descriptor count and available memory. The total search length is not capped at `1e15`.
+
+All admitted 67–95-bit positions use the optimized width-specific CUDA implementations with prepared cached parameters. There is no automatic general arithmetic backend. The resident worker is reused across ordinary pieces; Pause and safe quit close it and release the GPU.
 
 CUDA workers target `sm_86` and `sm_120`. Consult the included validation record
 for the distinction between compilation, physical GPU execution, and complete
@@ -156,7 +143,7 @@ application never adjusts GPU voltage, fans, power, or clocks.
 | --- | --- |
 | `Source/frontend` | Terminal UI, CLI, session ownership, checkpoints and reports |
 | `Source/native` | CUDA search pipeline, memory plan and exact endpoint proof bridge |
-| `Source/native/arithmetic/bits_N` | Individually optimized arithmetic for each width |
+| `Source/native/optimized_*.cuh` | Individually optimized arithmetic for each width |
 | `Source/tests/data` | Reproducible independent diagnostic fixtures |
 | `Docs` | User, build, architecture and validation guides |
 
@@ -165,6 +152,4 @@ and [third-party notices](Source/THIRD-PARTY-NOTICES.txt). File and data format
 identifiers needed for existing sessions remain stable. Launcher filenames are
 retained for compatibility; they do not restrict the supported bit width.
 
-The downloadable stable release is **1.3.2**. Versions 1.3.3 and 1.3.4 have been
-withdrawn; the revised three-column interface is being checked privately before
-any replacement release. The software never uploads reports automatically.
+The downloadable stable release is **1.3.5**. Versions 1.3.3 and 1.3.4 remain withdrawn. The software never uploads reports automatically.

@@ -33,7 +33,7 @@ class StatisticsTests(unittest.TestCase):
     def test_old_histogram_is_unknown_until_resume_not_a_false_zero(self):
         legacy=dict(count_total=7,threshold_counts={"954":7,"1000":3},merit_band_counts=None,at_or_above_target=None)
         rows=statistics_rows(legacy,32)
-        self.assertIn(("Retained gaps",7,False),rows)
+        self.assertIn(("Larger gaps",7,False),rows)
         self.assertIn(("Resume to load bands",None,False),rows)
         self.assertFalse(any(label=="m >= 32" and count==0 for label,count,section in rows))
 

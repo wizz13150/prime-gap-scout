@@ -2,7 +2,9 @@
 
 The frontend owns one session coordinator and its durable SQLite journal. It
 validates an exact integer interval and a pinned threshold policy, obtains an
-actual Native memory plan, then starts one owned CUDA worker. UI pages consume
+actual Native memory plan, then starts one owned resident CUDA worker. Consecutive physical pieces reuse
+that process, its CUDA context and device allocations. Pause, regime changes
+and shutdown retain explicit drain and checkpoint boundaries. UI pages consume
 snapshots and send typed actions to the coordinator; they do not own searches.
 
 ## Search pipeline
@@ -18,10 +20,11 @@ joins proof completion and next-version readiness.
 cyclic event representation. `candidate_walk.cuh` expresses interval ownership
 and candidate stepping. `memory_plan.h` computes allocation before submission.
 
-`specialized_engines.def` is the inventory of exact high-word domains, automatic
-thresholds, and state sizes. It drives kernel declarations, dispatch and public
-capabilities. Arithmetic lives under `arithmetic/bits_N/prime_test.cuh`; shared
-pipeline bodies do not replace or average the individually optimized arithmetic.
+`engine_specs.h` and `engine_contracts.h` describe specialization capabilities
+and numeric domains. Arithmetic lives in the `optimized_*.cuh` headers and their
+explicit supporting representations; common pipeline bodies do not replace
+the individually optimized arithmetic. Every high-word interval is dispatched
+to its qualified specialization, with the cached path enabled.
 The 67/68 radix-16 and 69 carry-aware paths retain their specific state layouts.
 
 ## Proof and publication
@@ -37,6 +40,13 @@ range-boundary repair. Runtime libraries and worker metadata carry fingerprints.
 
 These checks certify reported gap endpoints and interiors. They do not promote
 a finite test corpus into a proof of exhaustive search coverage.
+
+`resident_protocol.h` reads bounded immutable command snapshots and publishes
+atomic receipts. Each job has its own nonce, sequence and durable identity;
+a completed job is not recorded as an exited process. Release artifacts are
+pinned during a controller invocation, so their verified fingerprints can be
+reused without re-reading executable and proof-library bytes for every piece.
+Mutable checkpoints and results are always read and hashed afresh.
 
 ## Session and UI boundaries
 

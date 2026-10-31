@@ -19,20 +19,19 @@ def number(value):
 class GapIndex(MutableMapping):
     def __init__(self, path, session_id, configuration, configuration_hash):
         self._writer_thread = threading.get_ident()
+        self.configuration = json.loads(json.dumps(configuration))
         self.db = sqlite3.connect(str(path))
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA cache_size=-4096")  # At most4MiB page cache.
         self.db.execute("PRAGMA temp_store=FILE")
-        self.db.executescript(
-            """
+        self.db.executescript("""
           CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY,v TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS gaps(lo BLOB PRIMARY KEY,hi BLOB NOT NULL,gap INTEGER NOT NULL,seq INTEGER NOT NULL,bin INTEGER NOT NULL) WITHOUT ROWID;
           CREATE INDEX IF NOT EXISTS gaps_gap ON gaps(gap DESC,lo);
           CREATE INDEX IF NOT EXISTS gaps_recent ON gaps(seq DESC);
           CREATE TABLE IF NOT EXISTS chunks(idx INTEGER PRIMARY KEY,value TEXT NOT NULL);
-        """
-        )
+        """)
         binding = {"session_id": session_id, "configuration_hash": configuration_hash}
         prior = self.meta("binding")
         if prior is not None and prior != binding:
@@ -52,13 +51,11 @@ class GapIndex(MutableMapping):
                     + " INTEGER NOT NULL DEFAULT0".replace("DEFAULT0", "DEFAULT 0")
                 )
                 migrated = True
-        self.db.executescript(
-            """
+        self.db.executescript("""
           CREATE INDEX IF NOT EXISTS gaps_visible_count_rank ON gaps(visible,count_ok,gap DESC,lo);
           CREATE INDEX IF NOT EXISTS gaps_visible_detail_rank ON gaps(visible,detail_ok,gap DESC,lo);
           CREATE INDEX IF NOT EXISTS gaps_visible_count_recent ON gaps(visible,count_ok,seq DESC);
-        """
-        )
+        """)
         self.projection = Projection(self, configuration, rebuild=migrated)
 
     def meta(self, key, default=None):
@@ -67,7 +64,9 @@ class GapIndex(MutableMapping):
 
     def _assert_writer(self):
         if threading.get_ident() != self._writer_thread:
-            raise RuntimeError("SQLite mutations belong to the session coordinator only")
+            raise RuntimeError(
+                "SQLite mutations belong to the session coordinator only"
+            )
 
     def put_meta(self, key, value):
         self._assert_writer()
@@ -76,37 +75,86 @@ class GapIndex(MutableMapping):
             (key, json.dumps(value, separators=(",", ":"))),
         )
 
+    def _insert_gap(self, low, high, sequence):
+        if not self.projection.start <= low < self.projection.end or high <= low:
+            raise ValueError("Gap lower prime is outside its logical ownership")
+        prior = self.get(low)
+        if prior is not None and prior != high:
+            raise ValueError("Conflicting indexed gap")
+        group = bisect_right(self.bounds, low) - 1
+        count_ok, detail_ok = self.projection.eligibility(low, high - low)
+        changed = self.db.execute(
+            "INSERT OR IGNORE INTO gaps(lo,hi,gap,seq,bin,visible,count_ok,detail_ok) VALUES(?,?,?,?,?,?,?,?)",
+            (
+                blob(low),
+                blob(high),
+                high - low,
+                sequence,
+                group,
+                int(low < int(self.projection.value["prefix"])),
+                int(count_ok),
+                int(detail_ok),
+            ),
+        ).rowcount
+        return (
+            self.projection.inserted(low, high, group, sequence)
+            if changed
+            else self.projection.value
+        )
+
     def apply(self, event, offset):
         self._assert_writer()
         kind = event["type"]
         next_projection = self.projection.value
         with self.db:
             if kind == "gap":
-                low, high = int(event["lower"]), int(event["upper"])
-                prior = self.get(low)
-                if prior is not None and prior != high:
-                    raise ValueError("Conflicting indexed gap")
-                index = bisect_right(self.bounds, low) - 1
-                visible = int(low < int(self.projection.value["prefix"]))
-                changed = self.db.execute(
-                    "INSERT OR IGNORE INTO gaps(lo,hi,gap,seq,bin,visible,count_ok,detail_ok) VALUES(?,?,?,?,?,?,?,?)",
-                    (
-                        blob(low),
-                        blob(high),
-                        high - low,
-                        event["sequence"],
-                        index,
-                        visible,
-                        int(high - low >= self.projection.count),
-                        int(high - low >= self.projection.detail),
-                    ),
-                ).rowcount
-                if changed:
-                    next_projection = self.projection.inserted(low, high, index, event["sequence"])
-            elif kind in ("progress", "rewind"):
-                next_projection = self.projection.move(self.projection.start + event["positions"])
+                next_projection = self._insert_gap(
+                    int(event["lower"]), int(event["upper"]), event["sequence"]
+                )
+            elif kind == "exact_prefix":
+                from types import SimpleNamespace
+                from pgn_exact_prefix import validate_structure
+                from pgn_threshold_policy import at_position
+
+                proof = event["certificate"]
+                pin = self.configuration["threshold_policy"]
+                start, end = int(proof["start"]), int(proof["end"])
+                if (
+                    self.meta("active_chunk") is not None
+                    or start != int(self.projection.value["prefix"])
+                    or end > self.projection.end
+                ):
+                    raise ValueError(
+                        "Exact prefix does not continue the committed frontier"
+                    )
+                segment = at_position(pin, start)
+                if end > int(segment["end"]):
+                    raise ValueError("Exact prefix crosses its pinned threshold")
+                piece = SimpleNamespace(
+                    start=start,
+                    end=end,
+                    minimum_gap=segment["effective_gap_min"],
+                    kind="exact_short_prefix",
+                    policy_sha256=pin["sha256"],
+                )
+                validate_structure(proof, piece)
+                if proof["owned_gap"]:
+                    low, high = map(int, proof["owned_gap"])
+                    self._insert_gap(low, high, event["sequence"])
+                next_projection = self.projection.move(end)
+                prior = self.meta("progress", {"positions": 0, "tests": 0})
                 self.put_meta(
-                    "progress", {"positions": event["positions"], "tests": event["tests"]}
+                    "progress",
+                    {"positions": end - self.projection.start, "tests": prior["tests"]},
+                )
+                self.put_meta("last_exact_prefix", proof)
+            elif kind in ("progress", "rewind"):
+                next_projection = self.projection.move(
+                    self.projection.start + event["positions"]
+                )
+                self.put_meta(
+                    "progress",
+                    {"positions": event["positions"], "tests": event["tests"]},
                 )
             elif kind == "chunk_bind":
                 self.put_meta(
@@ -151,10 +199,14 @@ class GapIndex(MutableMapping):
                 if event.get("instance_closed") and current and current.get("instance"):
                     current["instance"]["closed"] = True
                     self.put_meta("active_chunk", current)
+                if event.get("work_closed") and current and current.get("instance"):
+                    current["instance"]["work_closed"] = True
+                    self.put_meta("active_chunk", current)
             elif kind == "chunk_closed":
                 chunk = event["chunk"]
                 self.db.execute(
-                    "INSERT OR REPLACE INTO chunks VALUES(?,?)", (chunk["index"], json.dumps(chunk))
+                    "INSERT OR REPLACE INTO chunks VALUES(?,?)",
+                    (chunk["index"], json.dumps(chunk)),
                 )
                 self.put_meta("active_chunk", None)
                 self.put_meta("completed_chunk_count", chunk["index"] + 1)
@@ -186,18 +238,103 @@ class GapIndex(MutableMapping):
         for lo, hi in self.db.execute("SELECT lo,hi FROM gaps ORDER BY lo"):
             yield number(lo), number(hi)
 
+    def _policy_column(self, role):
+        if role not in ("count", "detail"):
+            raise ValueError("Record role must be count or detail")
+        return role + "_ok"
+
+    def policy_rows(self, role, below):
+        import math
+
+        column = self._policy_column(role)
+        below = min(int(below), int(self.projection.value["prefix"]))
+        for lo, hi, gap in self.db.execute(
+            "SELECT lo,hi,gap FROM gaps WHERE visible=1 AND "
+            + column
+            + "=1 AND lo<? ORDER BY lo",
+            (blob(below),),
+        ):
+            low = number(lo)
+            yield gap, gap / math.log(low), low
+
+    def policy_count(self, role, below):
+        column = self._policy_column(role)
+        prefix = int(self.projection.value["prefix"])
+        if int(below) >= prefix:
+            return self.projection.value[role + "_total"]
+        return self.db.execute(
+            "SELECT COUNT(*) FROM gaps WHERE visible=1 AND " + column + "=1 AND lo<?",
+            (blob(below),),
+        ).fetchone()[0]
+
+    def policy_top(self, role, below, limit=100):
+        import math
+
+        column = self._policy_column(role)
+        prefix = int(self.projection.value["prefix"])
+        if int(below) >= prefix and limit <= self.projection.limit:
+            return [
+                (g, g / math.log(int(lo)), int(lo))
+                for g, lo, seq in self.projection.value[role + "_top"][:limit]
+            ]
+        return [
+            (g, g / math.log(number(lo)), number(lo))
+            for lo, g in self.db.execute(
+                "SELECT lo,gap FROM gaps WHERE visible=1 AND "
+                + column
+                + "=1 AND lo<? ORDER BY gap DESC,lo LIMIT ?",
+                (blob(min(int(below), prefix)), limit),
+            )
+        ]
+
+    def policy_recent(self, role, below, limit=10):
+        import math
+
+        column = self._policy_column(role)
+        prefix = int(self.projection.value["prefix"])
+        if role == "count" and int(below) >= prefix and limit <= 30:
+            return [
+                (g, g / math.log(int(lo)), int(lo))
+                for g, lo, seq in self.projection.value["recent"][:limit]
+            ]
+        return [
+            (g, g / math.log(number(lo)), number(lo))
+            for lo, g in self.db.execute(
+                "SELECT lo,gap FROM gaps WHERE visible=1 AND "
+                + column
+                + "=1 AND lo<? ORDER BY seq DESC LIMIT ?",
+                (blob(min(int(below), prefix)), limit),
+            )
+        ]
+
+    def policy_bin_counts(self, role, below):
+        column = self._policy_column(role)
+        prefix = int(self.projection.value["prefix"])
+        if role == "count" and int(below) >= prefix:
+            return list(self.projection.value["counts"])
+        counts = [0] * (len(self.bounds) - 1)
+        for i, n in self.db.execute(
+            "SELECT bin,COUNT(*) FROM gaps WHERE visible=1 AND "
+            + column
+            + "=1 AND lo<? GROUP BY bin",
+            (blob(min(int(below), prefix)),),
+        ):
+            counts[i] = n
+        return counts
+
     def iter_rows(self, threshold, below):
         import math
 
         for lo, hi, gap in self.db.execute(
-            "SELECT lo,hi,gap FROM gaps WHERE lo<? AND gap>=? ORDER BY lo", (blob(below), threshold)
+            "SELECT lo,hi,gap FROM gaps WHERE lo<? AND gap>=? ORDER BY lo",
+            (blob(below), threshold),
         ):
             low = number(lo)
             yield gap, gap / math.log(low), low
 
     def count_rows(self, threshold, below):
         value = self.projection.value
-        if below == int(value["prefix"]):
+        if not self.projection.dynamic and below == int(value["prefix"]):
             if threshold == self.projection.count:
                 return value["count_total"]
             if threshold == self.projection.detail:
@@ -215,12 +352,17 @@ class GapIndex(MutableMapping):
             if threshold == self.projection.count
             else "detail" if threshold == self.projection.detail else None
         )
-        if below == int(value["prefix"]) and name and limit <= self.projection.limit:
+        if (
+            not self.projection.dynamic
+            and below == int(value["prefix"])
+            and name
+            and limit <= self.projection.limit
+        ):
             return [
                 (gap, gap / math.log(int(lo)), int(lo))
                 for gap, lo, seq in value[name + "_top"][:limit]
             ]
-        if below == int(value["prefix"]) and name:
+        if not self.projection.dynamic and below == int(value["prefix"]) and name:
             return [
                 (gap, gap / math.log(number(lo)), number(lo))
                 for lo, gap in self.db.execute(
@@ -242,9 +384,15 @@ class GapIndex(MutableMapping):
         import math
 
         value = self.projection.value
-        if below == int(value["prefix"]) and threshold == self.projection.count and limit <= 30:
+        if (
+            not self.projection.dynamic
+            and below == int(value["prefix"])
+            and threshold == self.projection.count
+            and limit <= 30
+        ):
             return [
-                (gap, gap / math.log(int(lo)), int(lo)) for gap, lo, seq in value["recent"][:limit]
+                (gap, gap / math.log(int(lo)), int(lo))
+                for gap, lo, seq in value["recent"][:limit]
             ]
         return [
             (gap, gap / math.log(number(lo)), number(lo))
@@ -255,7 +403,11 @@ class GapIndex(MutableMapping):
         ]
 
     def bin_counts(self, threshold, below):
-        if below == int(self.projection.value["prefix"]) and threshold == self.projection.count:
+        if (
+            not self.projection.dynamic
+            and below == int(self.projection.value["prefix"])
+            and threshold == self.projection.count
+        ):
             return list(self.projection.value["counts"])
         counts = [0] * (len(self.bounds) - 1)
         for index, count in self.db.execute(

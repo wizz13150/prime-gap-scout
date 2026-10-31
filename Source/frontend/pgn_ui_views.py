@@ -697,8 +697,10 @@ def render_diagnostics(context, state, message=None):
 
 
 def _status(context):
-    from pgn_ui_workflow import phase
+    from pgn_ui_workflow import phase, starting_requested
 
+    if starting_requested(context):
+        return "Starting"
     return phase(context).replace("_", " ").title()
 
 

@@ -4,13 +4,13 @@
 // Independent CUDA adaptation of the periodic-table pre-sieve operator used by
 // primesieve (PreSieve.cpp, BSD-licensed project). This is generated from exact
 // divisibility; its byte encoding differs: set bit = composite class30 slot.
-// Scope: qualified high10 intervals, all far larger than these small primes.
+// The supported 67–95-bit intervals are all far larger than these small primes.
 #ifndef PGN_PRESIEVE_GROUPS
 #define PGN_PRESIEVE_GROUPS 0
 #endif
 static_assert(PGN_PRESIEVE_GROUPS == 0 || PGN_PRESIEVE_GROUPS == 1 || PGN_PRESIEVE_GROUPS == 3 ||
                   PGN_PRESIEVE_GROUPS == 5,
-              "Private periodic-filter group counts");
+              "Supported periodic-filter group counts");
 constexpr unsigned PgnPreMax = PGN_PRESIEVE_GROUPS == 0   ? 13
                                : PGN_PRESIEVE_GROUPS == 1 ? 23
                                : PGN_PRESIEVE_GROUPS == 3 ? 41

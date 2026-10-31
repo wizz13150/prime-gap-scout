@@ -15,13 +15,16 @@ remains Suspended. Pending transitions reject conflicting commands. Safe quit
 overrides a pending switch. Queued ranges follow in order.
 
 Unexpected closes can replay uncommitted work from the verified checkpoint.
-Reopen and Resume. Keep the WHOLE session folder and bin/compat. Compatible
-older checkpoints use their exact worker image. Legacy incompatible formats
-remain history; use the original program to resume those.
+Reopen and Resume. Keep the WHOLE session folder and installed application. When a worker image
+is replaced, its trusted completed prefix is retained and the installed
+optimized engine resumes from that frontier. Old images are not executed as
+a fallback. Incompatible legacy formats remain readable history.
 
 My sessions discovers actual saved folders. Arrows/wheel select; Enter opens
 details. Open results on a row opens THAT row's folder. Counts are complete;
-the human report defaults to top100. Best/Recent10 is independent of exports.
+the human report defaults to top100. Best/Recent10 is independent of exports. Statistics has cumulative gap-size
+counts and separate merit bands side by side; its counts include all indexed
+results in the selected range. The bottom cumulative-count frame is retained.
 
 Launcher edits save NEXT launch defaults. Range forms edit that range.
 Common settings are at the top; leave advanced overrides blank.
@@ -36,14 +39,15 @@ Unavailable hardware profiling counters are reported explicitly.
 
 DOMAIN
 ------
-Input syntax covers [2^66,2^80). Native --plan additionally checks class30
-origin, halo and one low64 window per chunk. Endpoints near a word boundary
-can be refused. Rejected ranges are not searched. Arbitrary boundary-crossing
-intervals are not all admitted. Admitted total lengths are not limited to1e15;
-automatic chunks preserve the requested total.
-Optimized backends are selected for their admitted high-word profiles; the
-general backend covers other admitted inputs. The graph measures specific
-starts and hardware, not a promise of identical speed at every number/GPU.
+Logical ranges cover [2^66,2^95). The coordinator splits work at physical
+word, bit-width and retention-threshold boundaries, preserving the requested
+interval. Short alignment fragments receive exact certification. All native
+searches use the optimized cached specializations; there is no general-engine
+fallback. Internal pieces do not limit the logical range.
+Consecutive pieces reuse the resident process, CUDA context and allocations.
+Starting is displayed while initialization or resume preparation is in progress.
+Pause drains the current piece, saves the checkpoint and releases its owner.
+The graph reports measured starts/hardware, not identical speed on every GPU.
 
 MERIT
 -----

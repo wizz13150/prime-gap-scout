@@ -7,7 +7,7 @@ namespace pgn_release_plan {
 constexpr uint64_t BlockNumbers = 30ULL << 25, MaxBlocks = 4194304;
 constexpr uint64_t Margin = 128ULL << 20;
 struct Range {
-    bool valid = false;
+    bool valid = false, tailClipped = false;
     const char *reason = "invalid_range";
     uint64_t low = 0, high = 0, length = 0, remainder = 0, base = 0, blocks = 0, count = 0;
 };
@@ -24,7 +24,7 @@ inline Range range(uint64_t low, uint64_t high, uint64_t length, unsigned k) {
         r.reason = "empty_range";
         return r;
     }
-    if (length > UINT64_MAX - low) {
+    if (length - 1 > UINT64_MAX - low) {
         r.reason = "single_low64_window_required";
         return r;
     }
@@ -37,16 +37,17 @@ inline Range range(uint64_t low, uint64_t high, uint64_t length, unsigned k) {
     }
     r.base = low - r.remainder;
     // low>=remainder and length<=MAX-low prove this addition cannot wrap.
+    if (length > MaxBlocks * BlockNumbers - r.remainder) {
+        r.reason = "descriptor_block_limit";
+        return r;
+    }
     const uint64_t covered = length + r.remainder;
     r.blocks = covered / BlockNumbers + (covered % BlockNumbers != 0);
     if (r.blocks > MaxBlocks) {
         r.reason = "descriptor_block_limit";
         return r;
     }
-    if ((UINT64_MAX - r.base) / BlockNumbers < r.blocks + 2) {
-        r.reason = "two_block_upper_halo_crosses_low64_window";
-        return r;
-    }
+    r.tailClipped = (UINT64_MAX - r.base) / BlockNumbers < r.blocks + 2;
     r.count = r.blocks / k + (r.blocks % k != 0);
     r.valid = true;
     r.reason = "ok";
@@ -81,17 +82,13 @@ inline Memory memory(const Range &r, unsigned k, unsigned lanes, uint64_t primeC
         m.maxDescriptors = (freeBytes - m.fixed - Margin) / m.perDescriptor;
         if (m.maxDescriptors > MaxBlocks / k)
             m.maxDescriptors = MaxBlocks / k;
-        const uint64_t blockRoom = (UINT64_MAX - r.base) / BlockNumbers;
-        const uint64_t haloBlocks = blockRoom > 2 ? blockRoom - 2 : 0;
         const uint64_t memoryBlocks =
             m.maxDescriptors > MaxBlocks / k ? MaxBlocks : m.maxDescriptors * k;
-        uint64_t maxBlocks = memoryBlocks < MaxBlocks ? memoryBlocks : MaxBlocks;
-        if (maxBlocks > haloBlocks)
-            maxBlocks = haloBlocks;
+        const uint64_t maxBlocks = memoryBlocks < MaxBlocks ? memoryBlocks : MaxBlocks;
         if (maxBlocks && maxBlocks * BlockNumbers > r.remainder) {
             m.maxLength = maxBlocks * BlockNumbers - r.remainder;
-            if (m.maxLength > UINT64_MAX - r.low)
-                m.maxLength = UINT64_MAX - r.low;
+            if (m.maxLength - 1 > UINT64_MAX - r.low)
+                m.maxLength = UINT64_MAX - r.low + 1;
         }
     }
     m.fits = r.valid && m.required <= freeBytes;

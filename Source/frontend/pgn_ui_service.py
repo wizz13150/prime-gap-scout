@@ -226,6 +226,7 @@ class MenuService:
             self.respond(request, ok=False, message="Page closed before the request was accepted")
         self._ui_pending = []
         self.ui_state.pop("pending_worker_request", None)
+        self.ui_state.pop("request_notice", None)
 
 
 def run_pages(service, entry):

@@ -15,6 +15,7 @@ from pgn_native_contract import (
     require_new_configuration,
     checked_checkpoint,
     module_metadata,
+    file_sha,
 )
 
 
@@ -42,7 +43,9 @@ class SessionControllerLock:
         except OSError:
             os.close(self.fd)
             self.fd = None
-            raise RuntimeError("This session already has a controller; use its existing window")
+            raise RuntimeError(
+                "This session already has a controller; use its existing window"
+            )
 
     def release(self):
         if self.fd is None:
@@ -109,7 +112,10 @@ def atomic_bytes(path, data):
                     os.replace(temporary, path)
                     break
                 except OSError as error:
-                    if getattr(error, "winerror", None) not in (5, 32, 33) or attempt == 4:
+                    if (
+                        getattr(error, "winerror", None) not in (5, 32, 33)
+                        or attempt == 4
+                    ):
                         raise
                     time.sleep(0.005 * (2**attempt))
             if os.name != "nt":
@@ -136,11 +142,16 @@ def read_session_metadata(folder):
         if path.stat().st_size > 1048576:
             raise ValueError("Oversized session metadata cache")
         metadata = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(metadata, dict) or metadata.get("schema") != "PGN68_DURABLE_SESSION_V1":
+    if (
+        not isinstance(metadata, dict)
+        or metadata.get("schema") != "PGN68_DURABLE_SESSION_V1"
+    ):
         raise ValueError("Unsupported session schema")
     binding = values.get("binding")
     digest = hashlib.sha256(
-        json.dumps(metadata["configuration"], sort_keys=True, separators=(",", ":")).encode()
+        json.dumps(
+            metadata["configuration"], sort_keys=True, separators=(",", ":")
+        ).encode()
     ).hexdigest()
     if binding is not None and binding != {
         "session_id": metadata["session_id"],
@@ -167,11 +178,7 @@ def read_session_metadata(folder):
 
 
 def file_hash(path):
-    value = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            value.update(block)
-    return value.hexdigest().upper()
+    return file_sha(path)
 
 
 class SessionStore:
@@ -197,7 +204,7 @@ class SessionStore:
                 ),
             )
         )
-        if not 954 <= self._original_floor <= 2147483647:
+        if not 30 <= self._original_floor <= 2147483647:
             raise ValueError("Invalid immutable session emission floor")
         with _locks_guard:
             if _writers.get(self._writer_key) is not None:
@@ -230,7 +237,8 @@ class SessionStore:
         if cls.exists(folder):
             raise FileExistsError("Session already exists; use resume explicitly")
         if session_id is not None and (
-            len(session_id) != 32 or any(c not in "0123456789abcdef" for c in session_id)
+            len(session_id) != 32
+            or any(c not in "0123456789abcdef" for c in session_id)
         ):
             raise ValueError("Invalid stable child session ID")
         metadata = {
@@ -275,7 +283,9 @@ class SessionStore:
     @classmethod
     def exists(cls, folder):
         folder = Path(folder)
-        return (folder / "session.json").is_file() or (folder / "session-index.sqlite3").is_file()
+        return (folder / "session.json").is_file() or (
+            folder / "session-index.sqlite3"
+        ).is_file()
 
     @coordinator_only
     def save(self):
@@ -300,7 +310,9 @@ class SessionStore:
 
     def configuration_hash(self):
         return hashlib.sha256(
-            json.dumps(self.meta["configuration"], sort_keys=True, separators=(",", ":")).encode()
+            json.dumps(
+                self.meta["configuration"], sort_keys=True, separators=(",", ":")
+            ).encode()
         ).hexdigest()
 
     @property
@@ -419,8 +431,19 @@ class SessionStore:
         if profile_k not in (8, 16, 32, 64) or length <= 0:
             raise ValueError("Invalid native chunk/profile")
         f = require_new_configuration(self.meta["configuration"])
+        from pgn_native_contract import piece_fields
+
+        local = piece_fields(
+            f["threshold_policy"], int(start), int(start) + int(length)
+        )
         if (
-            gap_min != f["effective_gap_min"]
+            int(start) != int(self.meta["configuration"]["start"]) + int(base_positions)
+            or int(base_positions) < 0
+            or int(base_tests) < 0
+        ):
+            raise ValueError("Native child frontier differs from its logical range")
+        if (
+            gap_min != local["effective_gap_min"]
             or threshold_policy_sha256 != f["threshold_policy"]["sha256"]
             or not worker_source_sha256
         ):
@@ -443,13 +466,22 @@ class SessionStore:
         if current and current.get("identity") != identity:
             raise ValueError("Resume cannot change input, worker hash or K profile")
         if not current:
+            if (int(base_positions), int(base_tests)) != (
+                int(self.meta["positions"]),
+                int(self.meta["tests"]),
+            ):
+                raise ValueError("New native child must start at the accepted frontier")
             self.meta["current_chunk"] = {
                 "index": self.meta.get("completed_chunk_count", 0),
                 "identity": identity,
                 "trusted_checkpoint": None,
                 "instance": None,
             }
-            self.append("chunk_bind", identity=identity, index=self.meta["current_chunk"]["index"])
+            self.append(
+                "chunk_bind",
+                identity=identity,
+                index=self.meta["current_chunk"]["index"],
+            )
         self.meta["state"] = "LAUNCH_INTENT"
         self.append(
             "state",
@@ -469,10 +501,18 @@ class SessionStore:
             raise ValueError("Worker hash changed; no resume/launch")
         f = require_new_configuration(self.meta["configuration"])
         identity = chunk["identity"]
+        from pgn_native_contract import piece_fields
+
+        local = piece_fields(
+            f["threshold_policy"],
+            int(identity["start"]),
+            int(identity["start"]) + int(identity["length"]),
+        )
         if (
             identity.get("native_protocol") != PROTOCOL
-            or identity.get("gap_min") != f["effective_gap_min"]
-            or identity.get("threshold_policy_sha256") != f["threshold_policy"]["sha256"]
+            or identity.get("gap_min") != local["effective_gap_min"]
+            or identity.get("threshold_policy_sha256")
+            != f["threshold_policy"]["sha256"]
         ):
             raise ValueError("Chunk threshold identity changed")
         m = module_metadata(identity["worker"])
@@ -501,11 +541,50 @@ class SessionStore:
             self.save()
 
     @coordinator_only
-    def started(self, pid, birth):
-        self.meta["current_chunk"]["instance"] = {"pid": pid, "birth": birth, "closed": False}
+    def started(self, pid, birth, job_nonce=None):
+        if job_nonce is not None and (
+            len(job_nonce)!=32 or any(c not in "0123456789abcdef" for c in job_nonce)
+        ):
+            raise ValueError("Invalid resident job nonce")
+        self.meta["current_chunk"]["instance"] = {
+            "pid": pid,
+            "birth": birth,
+            "closed": False,
+        }
+        if job_nonce is not None:
+            self.meta["current_chunk"]["instance"]["job_nonce"] = job_nonce
         self.append("instance_started", instance=self.meta["current_chunk"]["instance"])
         self.meta["state"] = "RUNNING"
         self.save()
+
+    @coordinator_only
+    def complete_exact_prefix(self, piece, certificate, find_exact_pair):
+        from pgn_exact_prefix import verify
+        from pgn_threshold_policy import at_position
+
+        f = require_new_configuration(self.meta["configuration"])
+        pin = f["threshold_policy"]
+        frontier = int(self.meta["configuration"]["start"]) + int(
+            self.meta["positions"]
+        )
+        if (
+            self.meta.get("current_chunk") is not None
+            or piece.start != frontier
+            or piece.end > int(self.meta["configuration"]["end"])
+        ):
+            raise ValueError("Exact prefix must continue a closed native frontier")
+        segment = at_position(pin, piece.start)
+        if (
+            piece.policy_sha256 != pin["sha256"]
+            or piece.minimum_gap != segment["effective_gap_min"]
+            or piece.end > int(segment["end"])
+        ):
+            raise ValueError("Exact prefix policy differs from the logical range")
+        verify(certificate, piece, find_exact_pair)
+        self.append("exact_prefix", certificate=certificate)
+        self.meta["positions"] = piece.end - int(self.meta["configuration"]["start"])
+        self.save()
+        return self.meta["positions"]
 
     @coordinator_only
     def accepted_progress(self, positions, tests):
@@ -520,7 +599,9 @@ class SessionStore:
         self.append("rewind", positions=positions, tests=tests)
         self.meta.update(positions=positions, tests=tests)
         if unknown_wall:
-            self.meta.update(timing_complete=False, rate_scope="SINCE_RESUME_UNKNOWN_CRASH_WALL")
+            self.meta.update(
+                timing_complete=False, rate_scope="SINCE_RESUME_UNKNOWN_CRASH_WALL"
+            )
         self.save()
 
     @coordinator_only
@@ -528,7 +609,9 @@ class SessionStore:
         chunk = self.meta["current_chunk"]
         identity = chunk["identity"]
         data = Path(path).read_bytes()
-        position, tests = checked_checkpoint(data, identity, native_position, native_tests)
+        position, tests = checked_checkpoint(
+            data, identity, native_position, native_tests
+        )
         backup = self.folder / "trusted-current-checkpoint.bin"
         atomic_bytes(backup, data)
         chunk["trusted_checkpoint"] = {
@@ -539,6 +622,39 @@ class SessionStore:
         }
         self.append("checkpoint_trusted", checkpoint=chunk["trusted_checkpoint"])
         self.save()
+
+    @coordinator_only
+    def retire_unstarted_chunk(self):
+        """Archive a closed binding with no accepted native checkpoint."""
+        chunk = self.meta.get("current_chunk")
+        if not chunk or chunk.get("trusted_checkpoint") is not None:
+            raise ValueError(
+                "Only an unstarted binding can be retired without a checkpoint"
+            )
+        instance = chunk.get("instance") or {}
+        if instance and not instance.get("closed"):
+            raise ValueError("Cannot retire a live Native instance")
+        identity = chunk["identity"]
+        if (self.meta["positions"], self.meta["tests"]) != (
+            identity["base_positions"],
+            identity["base_tests"],
+        ):
+            raise ValueError("Unstarted binding differs from the accepted frontier")
+        saved = json.loads(json.dumps(chunk))
+        saved.update(
+            accepted_prefix_positions=0,
+            accepted_prefix_tests=0,
+            close_reason="REPLACED_UNSTARTED_BINDING",
+        )
+        self.append("chunk_closed", chunk=saved)
+        self.meta["closed_chunks"] = (self.meta.get("closed_chunks", []) + [saved])[
+            -10:
+        ]
+        self.meta["completed_chunk_count"] = saved["index"] + 1
+        self.meta["current_chunk"] = None
+        self.meta["state"] = "PAUSED"
+        self.save()
+        return saved
 
     @coordinator_only
     def retire_closed_prefix(self, native_positions, native_tests):
@@ -577,7 +693,9 @@ class SessionStore:
         # Existing replay semantics close a Native binding; progress is a
         # separate journal frontier. Original input length is never rewritten.
         self.append("chunk_closed", chunk=saved)
-        self.meta["closed_chunks"] = (self.meta.get("closed_chunks", []) + [saved])[-10:]
+        self.meta["closed_chunks"] = (self.meta.get("closed_chunks", []) + [saved])[
+            -10:
+        ]
         self.meta["completed_chunk_count"] = saved["index"] + 1
         self.meta["current_chunk"] = None
         self.meta["state"] = "PAUSED"
@@ -599,23 +717,36 @@ class SessionStore:
         if hashlib.sha256(data).hexdigest() != trusted["sha256"]:
             raise ValueError("Trusted checkpoint bytes changed")
         checked_checkpoint(
-            data, chunk["identity"], trusted["native_positions"], trusted["native_tests"]
+            data,
+            chunk["identity"],
+            trusted["native_positions"],
+            trusted["native_tests"],
         )
         atomic_bytes(Path(destination), data)
         return trusted["native_positions"], trusted["native_tests"]
 
     @coordinator_only
-    def closed(self, state, active_seconds, paused_seconds, chunk_complete=False):
+    def closed(self, state, active_seconds, paused_seconds, chunk_complete=False,
+               instance_closed=True, work_receipt=None):
         chunk = self.meta.get("current_chunk")
+        if not instance_closed:
+            from pgn_resident import WorkReceipt
+            if not isinstance(work_receipt,WorkReceipt) or not chunk or not work_receipt.matches(chunk):
+                raise ValueError("A live resident needs an exact verified work-completion receipt")
         if chunk and chunk.get("instance"):
-            chunk["instance"]["closed"] = True
-        self.meta.update(state=state, active_seconds=active_seconds, paused_seconds=paused_seconds)
+            chunk["instance"]["closed"] = bool(instance_closed)
+            if work_receipt is not None:
+                chunk["instance"]["work_closed"] = True
+        self.meta.update(
+            state=state, active_seconds=active_seconds, paused_seconds=paused_seconds
+        )
         self.append(
             "state",
             state=state,
             active_seconds=active_seconds,
             paused_seconds=paused_seconds,
-            instance_closed=True,
+            instance_closed=bool(instance_closed),
+            work_closed=work_receipt is not None,
             timing_complete=self.meta.get("timing_complete", True),
             rate_scope=self.meta.get("rate_scope"),
         )

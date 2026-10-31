@@ -1,0 +1,75 @@
+{
+  "schema": "SCOUT_RELEASE_VALIDATION_V1",
+  "version": "1.3.5",
+  "source_manifest_sha256": "96C600D3486DED57B400FCD4428E904F6A3743E49F587DC85E93847D9FFDDE13",
+  "windows_frontend_sha256": "CAE89CB7030FEDA249816C644ECCFD379DEEF244759E93231D368BDF249AB102",
+  "native_images": {
+    "windows_sm86": "F0B9F81B3F8B8316BEADAB8F04E90A85C412D6DABE2793548F05D66D1AF80DD5",
+    "windows_sm120": "23D8396FCBABE2955CF947BE399FFD8B707D8734BCF3BB11F97F1FC356339CED",
+    "ubuntu_sm86": "E0BC348BE993D53BDFED414A65125C8449492CB2A02C817483B24097D62DC55C",
+    "ubuntu_sm120": "80996328BEDBE84DD9DD25D5AB82EDE53897E83B21540F9A7B35378C37350859"
+  },
+  "checks": {
+    "windows_python": {
+      "passed": 86,
+      "skipped": 0
+    },
+    "ubuntu_artifact_lease": {
+      "passed": 4
+    },
+    "native_cpu_resident_commands": 5000,
+    "exact_dense_gpu_cases": 132,
+    "threshold_transitions": 11,
+    "production_gpu_jobs": 6,
+    "frozen_64_pieces": {
+      "positions": "64000000000000",
+      "one_native_pid": true,
+      "distinct_job_nonces": 127,
+      "wall_seconds": 101.844,
+      "host_handoff_median_ms": 346.8361,
+      "host_handoff_max_ms": 631.1774
+    },
+    "frozen_endbits": [
+      {
+        "bits": 80,
+        "positions": "4000000000000",
+        "pieces": 4,
+        "gaps": 24,
+        "identical_to_reference": true
+      },
+      {
+        "bits": 95,
+        "positions": "4000000000000",
+        "pieces": 4,
+        "gaps": 18,
+        "identical_to_reference": true
+      }
+    ],
+    "command_guards": "Released exactly once after validated receipt; malformed receipt remains guarded until owner closure",
+    "final_frozen_repeat": {
+      "pieces": 64,
+      "positions": "64000000000000",
+      "one_native_pid": true,
+      "wall_seconds": 106.218,
+      "identical_full_gap_set": true,
+      "handles_early": 213,
+      "handles_late_max": 222
+    }
+  },
+  "hardware_scope": {
+    "physical_cuda": "Windows RTX 3090 / SM86",
+    "compiled_only": [
+      "Ubuntu SM86",
+      "Ubuntu SM120",
+      "Windows SM120"
+    ],
+    "ubuntu_frontend": "version/help startup and portable targeted tests"
+  },
+  "claims_excluded": [
+    "zero-time host handoff",
+    "new benchmark records",
+    "physical Ubuntu CUDA qualification",
+    "physical SM120 hardware qualification",
+    "mathematical proof from finite coverage tests"
+  ]
+}

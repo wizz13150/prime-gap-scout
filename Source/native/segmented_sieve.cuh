@@ -1,9 +1,8 @@
 #pragma once
-// PRIVATE SOURCE candidate, uncompiled/untested. Include pinned p0 first.
-// No bitmap format, runtime, ABI, sieve bank, gap threshold or PRP change.
-// The parent domain remains qualified H10; do not extend Tiny.phase guards.
-#ifndef P0_WALK_KERN_CUH
-#error Include the pinned original candidate_walk.cuh before this private header
+// Fused class30 sieve with full high/low origin phases.
+// The bitmap representation and wheel profile match candidate_walk.cuh.
+#ifndef SCOUT_CANDIDATE_WALK_CUH
+#error Include candidate_walk.cuh before segmented_sieve.cuh
 #endif
 #if !defined(PGN_FUSED_SIEVE) || !defined(PGN_MARK_FULL_FAST) || !defined(PGN_MARK_BANK_ROTATE)
 #error Segmented sieve requires the unchanged retained marker compilation profile

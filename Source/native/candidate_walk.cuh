@@ -1,44 +1,12 @@
-/*
- * candidate_walk.cuh - class-30 bitmap sieve + batched jump-walk kernels for
- * the Phase-0 scanner's --engine walk (moved verbatim from
- * tools/phase0_scan_gpu.cu so the Windows kernel-DLL split can compile them
- * without the host code).
- *
- * Ported from tools/walk_engine.cu (Phase-0 parity prototype; gates: sieve
- * VERIFY arbiter false=0 miss=0 of 35.8M slots, 22/22 set-gate vs the
- * odd-slot engine, NB=1 identical).
- * block = 30*2^25 = 1,006,632,960 numbers = 2^28 slots (32 MB bitmap),
- * tile = 2^19 slots (64 KB shared), wheel {7,11,13} as a precomputed group
- * pattern, item table = (prime, 64-mark chunk) rows with per-prime setup
- * reuse in contiguous per-thread runs.
- *
- * PORTABILITY: no __int128 anywhere - MSVC (the Windows host compiler nvcc
- * requires) has no 128-bit integer type, and the host pass of nvcc parses
- * this file.  The two 128-bit expressions this code needs are written with
- * __umul64hi + an explicit carry chain instead (identical results; the Linux
- * build compiles the same source).
+#ifndef SCOUT_CANDIDATE_WALK_CUH
+#define SCOUT_CANDIDATE_WALK_CUH
+/* Class30 bitmap sieve and conserved jump-walk ownership.
+ * Primality candidate tests are selected by their complete numeric width domain.
  */
-#ifndef P0_WALK_KERN_CUH
-#define P0_WALK_KERN_CUH
 
 #include <stdint.h>
 #include "pgn_periodic_presieve.cuh"
-#ifdef PGN_EULER96_UNIFORM_WALK
-#include "pgn_walk_continuation.h"
-#endif
-#ifdef PGN_EULER96_DYNAMIC_SLICES
-#include "walk_slice_partition.h"
-#endif
 #include "candidate_types.h"   /* w_gaprec_t */
-#include "perig.cuh"           /* ciosFermatTest128_hi - exact to 120 bits */
-#include "mr128_64_kernel.cuh" /* >= 2^120: exact 2x64-bit CIOS, 1.1x faster
-                                   than the 4x32 kernel (tools/mr128_bench.cu) */
-#ifdef PGN_EULER96
-#include "euler96.cuh"
-#endif
-#ifdef PGN_EULER68
-#include "euler68.cuh"
-#endif
 
 __device__ __constant__ uint32_t c30_cls[8] = {1, 7, 11, 13, 17, 19, 23, 29};
 __device__ __constant__ int8_t c30_clsidx[30];
@@ -681,361 +649,30 @@ __global__ static void W_RESIDENT_CAP class30_sieve_kernel(
                        g_bm, tileWords, wpidx, wheel_on);
 }
 
-/* class-30 walk: slot->value uses the class map, the window advance comes
-   from wtab[class of anchor]; primality = Perig base-2 Euler test with the
-   scan range's high word passed at runtime (ciosFermatTest128_hi). */
-/* Primality test dispatch.  perig's ciosFermatTest128_hi is exact up to 120
-   bits but rejects real primes from 121 bits on (a false negative silently
-   splits a gap - see tools/mr128_64_kernel.cuh).  Bands: perig below 2^120,
-   the lazy ladder (mr128_64_base2_lazy, exact < 2^126, +37%) in
-   2^120..2^126, and the canonical kernel above 2^126.  Values below 2^120
-   keep the perig verdict, so the <= 96-bit production path is bit-for-bit
-   unchanged. */
-#define W_PERIG_MAX_HI (1ULL << 56) /* value < 2^120 */
-#define W_LAZY_MAX_HI (1ULL << 62)  /* value < 2^126 */
 
-/* The test is selected at kernel-compile time, not per call: instantiating
-   three variants in one kernel lets ptxas allocate registers for the worst
-   branch, which cost the production (perig) path 18%.  The host launches the
-   variant matching the super-batch's high word. */
-template <int MODE>
-__device__ static inline int w_is_probable_prime(uint64_t v, uint64_t Ahi, uint64_t batchQ = 0) {
-#ifdef PGN_EULER68
-    if (MODE == 3)
-        return pgn_euler68::test(v, Ahi) ? 1 : 0;
-#endif
-#ifdef PGN_EULER96
-#ifdef PGN_EULER96_BATCH_Q
-    if (MODE == 3)
-        return pgn_euler96::test(v, Ahi, batchQ) ? 1 : 0;
-#else
-    if (MODE == 3)
-        return pgn_euler96::test(v, Ahi) ? 1 : 0;
-#endif
-#endif
-    if (MODE == 2)
-        return mr128_64_base2_u128(v, Ahi);
-    if (MODE == 1)
-        return mr128_64_base2_lazy_u128(v, Ahi);
-    return ciosFermatTest128_hi(v, Ahi) ? 1 : 0;
+#include "engine_contracts.h"
+template<int Bits,uint64_t High>struct pgn_arithmetic_state{using type=scout_arithmetic::State<Bits>;};
+template<int Bits,uint64_t High,bool Upper=true>
+__device__ __forceinline__ int w_live_prime(uint64_t low,uint64_t high,uint64_t /*batch*/,typename pgn_arithmetic_state<Bits,High>::type&state){
+ return scout_arithmetic::test<Bits,High,Upper>(low,uint32_t(high),state)?1:0;
 }
-
-namespace pgn_euler96 {
-__host__ __device__ __forceinline__ bool test(uint64_t low, uint64_t high);
-}
-#include "stateful-u160-67.cuh"
-#include "specialized_prime_tests.cuh"
-template <int MODE> struct pgn_release_live_state {
-    using type = cached_euler68::State;
-};
-template <> struct pgn_release_live_state<67> {
-    using type = cached_euler67::State;
-};
-template <> struct pgn_release_live_state<69> {
-    using type = pgn_release_backend69::State;
-};
-template <> struct pgn_release_live_state<70> {
-    using type = pgn_release_backend70::State;
-};
-template <> struct pgn_release_live_state<71> {
-    using type = pgn_release_backend71::State;
-};
-template <> struct pgn_release_live_state<72> {
-    using type = pgn_release_backend72::State;
-};
-template <> struct pgn_release_live_state<73> {
-    using type = pgn_release_backend73::State;
-};
-template <> struct pgn_release_live_state<74> {
-    using type = pgn_release_backend74::State;
-};
-template <> struct pgn_release_live_state<75> {
-    using type = pgn_release_backend75::State;
-};
-template <> struct pgn_release_live_state<76> {
-    using type = pgn_release_backend76::State;
-};
-template <> struct pgn_release_live_state<77> {
-    using type = pgn_release_backend77::State;
-};
-template <> struct pgn_release_live_state<78> {
-    using type = pgn_release_backend78::State;
-};
-template <> struct pgn_release_live_state<79> {
-    using type = pgn_release_backend79::State;
-};
-template <> struct pgn_release_live_state<80> {
-    using type = pgn_release_backend80::State;
-};
-template <> struct pgn_release_live_state<81> {
-    using type = pgn_release_backend81::State;
-};
-template <> struct pgn_release_live_state<82> {
-    using type = pgn_release_backend82::State;
-};
-template <> struct pgn_release_live_state<83> {
-    using type = pgn_release_backend83::State;
-};
-template <> struct pgn_release_live_state<84> {
-    using type = pgn_release_backend84::State;
-};
-template <> struct pgn_release_live_state<85> {
-    using type = pgn_release_backend85::State;
-};
-template <> struct pgn_release_live_state<86> {
-    using type = pgn_release_backend86::State;
-};
-template <> struct pgn_release_live_state<87> {
-    using type = pgn_release_backend87::State;
-};
-template <> struct pgn_release_live_state<88> {
-    using type = pgn_release_backend88::State;
-};
-template <> struct pgn_release_live_state<89> {
-    using type = pgn_release_backend89::State;
-};
-template <> struct pgn_release_live_state<90> {
-    using type = pgn_release_backend90::State;
-};
-template <> struct pgn_release_live_state<91> {
-    using type = pgn_release_backend91::State;
-};
-template <> struct pgn_release_live_state<92> {
-    using type = pgn_release_backend92::State;
-};
-template <> struct pgn_release_live_state<93> {
-    using type = pgn_release_backend93::State;
-};
-template <> struct pgn_release_live_state<94> {
-    using type = pgn_release_backend94::State;
-};
-template <> struct pgn_release_live_state<95> {
-    using type = pgn_release_backend95::State;
-};
-template <int MODE, uint64_t HIGH>
-__device__ __forceinline__ static int
-w_live_prime(uint64_t v, uint64_t ahi, uint64_t batchQ,
-             typename pgn_release_live_state<MODE>::type &state) {
-    if constexpr (MODE == 67)
-        return cached_euler67::test(v, state) ? 1 : 0;
-    if constexpr (MODE == 69) {
-        static_assert(HIGH == 21ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend69::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 70) {
-        static_assert(HIGH == 43ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend70::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 71) {
-        static_assert(HIGH == 81ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend71::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 72) {
-        static_assert(HIGH == 162ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend72::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 73) {
-        static_assert(HIGH == 325ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend73::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 74) {
-        static_assert(HIGH == 542ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend74::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 75) {
-        static_assert(HIGH == 1084ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend75::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 76) {
-        static_assert(HIGH == 2168ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend76::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 77) {
-        static_assert(HIGH == 5421ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend77::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 78) {
-        static_assert(HIGH == 16263ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend78::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 79) {
-        static_assert(HIGH == 21684ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend79::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 80) {
-        static_assert(HIGH == 54210ULL, "Retained point requires its real literalHigh");
-        return pgn_release_backend80::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 81) {
-        static_assert(HIGH == 108420ULL, "Specialized high-word admission");
-        return pgn_release_backend81::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 82) {
-        static_assert(HIGH == 162630ULL, "Specialized high-word admission");
-        return pgn_release_backend82::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 83) {
-        static_assert(HIGH == 271050ULL, "Specialized high-word admission");
-        return pgn_release_backend83::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 84) {
-        static_assert(HIGH == 542101ULL, "Specialized high-word admission");
-        return pgn_release_backend84::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 85) {
-        static_assert(HIGH == 1084202ULL, "Specialized high-word admission");
-        return pgn_release_backend85::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 86) {
-        static_assert(HIGH == 2168404ULL, "Specialized high-word admission");
-        return pgn_release_backend86::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 87) {
-        static_assert(HIGH == 4336808ULL, "Specialized high-word admission");
-        return pgn_release_backend87::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 88) {
-        static_assert(HIGH == 10842021ULL, "Specialized high-word admission");
-        return pgn_release_backend88::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 89) {
-        static_assert(HIGH == 21684043ULL, "Specialized high-word admission");
-        return pgn_release_backend89::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 90) {
-        static_assert(HIGH == 54210108ULL, "Specialized high-word admission");
-        return pgn_release_backend90::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 91) {
-        static_assert(HIGH == 108420217ULL, "Specialized high-word admission");
-        return pgn_release_backend91::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 92) {
-        static_assert(HIGH == 162630325ULL, "Specialized high-word admission");
-        return pgn_release_backend92::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 93) {
-        static_assert(HIGH == 271050543ULL, "Specialized high-word admission");
-        return pgn_release_backend93::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 94) {
-        static_assert(HIGH == 542101086ULL, "Specialized high-word admission");
-        return pgn_release_backend94::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 95) {
-        static_assert(HIGH == 1084202172ULL, "Specialized high-word admission");
-        return pgn_release_backend95::test(v, state) ? 1 : 0;
-    }
-    if constexpr (MODE == 3 && HIGH == 10ULL)
-        return cached_euler68::test(v, state) ? 1 : 0;
-    return w_is_probable_prime<MODE>(v, HIGH == UINT64_MAX ? ahi : HIGH, batchQ);
-}
-
-__host__ static inline int w_test_mode(uint64_t Ahi) {
-#if defined(PGN_EULER96) || defined(PGN_EULER68)
-    if (Ahi > 0 && Ahi <= UINT32_MAX)
-        return 3;
-#endif
-    if (Ahi >= W_LAZY_MAX_HI)
-        return 2;
-    if (Ahi >= W_PERIG_MAX_HI)
-        return 1;
-    return 0;
-}
-
-#ifdef PGN_EULER96_UNIFORM_WALK
-template <int MODE, uint64_t HIGH> struct w_uniform_ops {
-    const uint64_t *bm;
-    uint64_t nwords, alo, ahi;
-    const uint32_t *wtab;
-    uint32_t minGap, cap;
-    w_gaprec_t *out;
-    const uint32_t *classes;
-    uint64_t quotient;
-    __device__ int64_t next(int64_t slot) const {
-        return w_nextCand(bm, nwords, slot);
-    }
-    __device__ int64_t previous(int64_t slot) const {
-        return w_prevCand(bm, slot);
-    }
-    __device__ int64_t shift(int64_t slot) const {
-        return wtab[slot & 7];
-    }
-    __device__ uint64_t value(int64_t slot) const {
-        return alo + 30ULL * ((uint64_t)slot >> 3) + (uint64_t)classes[slot & 7];
-    }
-    __device__ bool prime(int64_t slot) const {
-        return w_is_probable_prime<MODE>(value(slot), HIGH == UINT64_MAX ? ahi : HIGH, quotient);
-    }
-    __device__ void gap(int64_t p, int64_t q) const {
-        const uint64_t lower = value(p);
-        const uint32_t length = (uint32_t)(value(q) - lower);
-        if (length < minGap)
-            return;
-        const uint32_t index = atomicAdd((uint32_t *)&out[0].gap, 1u);
-        if (index < cap - 1) {
-            out[index + 1].slot = lower;
-            out[index + 1].gap = length;
-        }
-    }
-};
-#endif
-template <int TESTMODE, uint64_t FIXED_HI = UINT64_MAX>
-__device__ __forceinline__ static void
-w_owned_slice(const uint64_t *bm, uint64_t nwords, uint64_t Alo, uint64_t Ahi, const uint32_t *wtab,
+template<int TESTMODE,uint64_t FIXED_HI=UINT64_MAX,bool Upper=true,bool ClipAtWordEnd=false>
+__device__ __forceinline__ static void w_owned_slice(const uint64_t *bm, uint64_t nwords, uint64_t Alo, uint64_t Ahi, const uint32_t *wtab,
               uint32_t minGapVal, w_gaprec_t *out, uint32_t cap, unsigned long long *stats,
-              const uint32_t *scls, uint64_t batchQ, uint64_t total, uint64_t tid) {
+              const uint32_t *scls, uint64_t batchQ, uint64_t total, uint64_t tid, uint32_t prepared_mu=0, uint32_t prepared_coefficient=0, uint64_t scan_slots=UINT64_MAX) {
     uint64_t nslots = nwords * 64;
-#ifdef PGN_EULER96_UNIFORM_WALK
-    const w_uniform_ops<TESTMODE, FIXED_HI> ops{bm,        nwords, Alo, Ahi,  wtab,
-                                                minGapVal, cap,    out, scls, batchQ};
-    auto state = pgn_walk::startWalk(nslots, total, tid, ops);
-    int64_t coordinate;
-    while (pgn_walk::requestWalkTest(state, ops, coordinate)) {
-        const bool prime = ops.prime(coordinate);
-        pgn_walk::acceptWalkTest(state, ops, prime);
+    if(nslots>scan_slots)nslots=scan_slots;
+    if constexpr (ClipAtWordEnd) {
+        const uint64_t room = UINT64_MAX - Alo;
+        const uint64_t cycles = room / 30, remainder = room % 30;
+        uint64_t valid = cycles * 8;
+        for (unsigned j = 0; j < 8; ++j)
+            valid += scls[j] <= remainder;
+        if (nslots > valid) nslots = valid;
     }
-    atomicAdd(&stats[0], state.tests);
-    atomicAdd(&stats[1], state.jumps);
-    return;
-#endif
-#if defined(PGN_EULER96_DYNAMIC_SLICES) || defined(PGN_EULER96_CONSERVED_SLICES)
-    // The existing host zeroes the complete out[0] header in the same stream
-    // before this launch. Its otherwise-unused slot field owns this launch's
-    // ticket counter; output gap count remains the distinct out[0].gap field.
-    // Every warp claims 32 disjoint jobs. Invalid tail lanes still participate
-    // in the next shuffle: no partial-mask collective and no cross-launch state.
-#ifdef PGN_EULER96_CONSERVED_SLICES
-    // Change physical scheduling, NOT logical ownership. Every interval is the
-    // exact original 164*512-thread interval, including its last remainder.
-    // Unlike smaller dynamic slices, this creates no extra prime seed searches.
-    constexpr uint64_t jobCount = 164ULL * 512ULL;
-    const uint64_t originalSliceLen = nslots / jobCount;
-    if (originalSliceLen == 0)
-        return;
-#else
-    const uint64_t jobCount = nslots < total * 8 ? nslots : total * 8;
-#endif
-    const int64_t end = (int64_t)nslots;
-    unsigned long long tests = 0, jumps = 0;
-    for (;;) {
-        unsigned long long group = 0;
-        if ((threadIdx.x & 31u) == 0)
-            group = atomicAdd((unsigned long long *)&out[0].slot, 32ULL);
-        group = __shfl_sync(0xffffffffu, group, 0);
-        if (group >= jobCount)
-            break;
-        const uint64_t job = group + (threadIdx.x & 31u);
-        if (job >= jobCount)
-            continue;
-#ifdef PGN_EULER96_CONSERVED_SLICES
-        const int64_t lo = (int64_t)(job * originalSliceLen);
-        const int64_t hi = job + 1 == jobCount ? (int64_t)nslots : lo + (int64_t)originalSliceLen;
-#else
-        const auto bounds = pgn_walk::slice(nslots, jobCount, job);
-        const int64_t lo = (int64_t)bounds.lo, hi = (int64_t)bounds.hi;
-#endif
-#else
+    if(!nslots)return;
+    if(total>nslots)total=nslots;
+    if(tid>=total)return;
     uint64_t sliceLen = nslots / total;
     int64_t lo = (int64_t)(tid * sliceLen);
     int64_t hi = (tid + 1 == total) ? (int64_t)nslots : lo + (int64_t)sliceLen;
@@ -1043,33 +680,24 @@ w_owned_slice(const uint64_t *bm, uint64_t nwords, uint64_t Alo, uint64_t Ahi, c
         return;
     const int64_t end = (int64_t)nslots;
     unsigned long long tests = 0, jumps = 0;
-#endif
-        typename pgn_release_live_state<TESTMODE>::type liveState{};
+        auto liveState=scout_arithmetic::start_state<TESTMODE>(prepared_mu,prepared_coefficient);
         int64_t c = w_nextCand(bm, nwords, lo);
-        while (c >= 0) {
+        while (c >= 0 && (!ClipAtWordEnd || uint64_t(c) < nslots)) {
             tests++;
             uint64_t v = Alo + 30ull * ((uint64_t)c >> 3) + (uint64_t)scls[c & 7u];
-            if (w_live_prime<TESTMODE, FIXED_HI>(v, Ahi, batchQ, liveState))
+            if (w_live_prime<TESTMODE, FIXED_HI,Upper>(v, Ahi, batchQ, liveState))
                 break;
             c = w_nextCand(bm, nwords, c + 1);
         }
-        if (c < 0) {
-#if defined(PGN_EULER96_DYNAMIC_SLICES) || defined(PGN_EULER96_CONSERVED_SLICES)
-            continue;
-#else
+        if (c < 0 || (ClipAtWordEnd && uint64_t(c) >= nslots)) {
         atomicAdd(&stats[0], tests);
         return;
-#endif
         }
         int64_t p = c;
         int64_t s = p + (int64_t)wtab[p & 7];
         if (s >= end) {
-#if defined(PGN_EULER96_DYNAMIC_SLICES) || defined(PGN_EULER96_CONSERVED_SLICES)
-            continue;
-#else
         atomicAdd(&stats[0], tests);
         return;
-#endif
         }
         for (;;) {
             if (p >= hi)
@@ -1081,11 +709,11 @@ w_owned_slice(const uint64_t *bm, uint64_t nwords, uint64_t Alo, uint64_t Ahi, c
                 int64_t q = p + (int64_t)wtab[p & 7];
                 for (;;) {
                     q = w_nextCand(bm, nwords, q);
-                    if (q < 0)
+                    if (q < 0 || (ClipAtWordEnd && uint64_t(q) >= nslots))
                         goto done7;
                     tests++;
                     uint64_t vq = Alo + 30ull * ((uint64_t)q >> 3) + (uint64_t)scls[q & 7u];
-                    if (w_live_prime<TESTMODE, FIXED_HI>(vq, Ahi, batchQ, liveState)) {
+                    if (w_live_prime<TESTMODE, FIXED_HI,Upper>(vq, Ahi, batchQ, liveState)) {
                         uint64_t vp = Alo + 30ull * ((uint64_t)p >> 3) + (uint64_t)scls[p & 7u];
                         uint32_t gap = (uint32_t)(vq - vp);
                         if (gap >= minGapVal) {
@@ -1108,7 +736,7 @@ w_owned_slice(const uint64_t *bm, uint64_t nwords, uint64_t Alo, uint64_t Ahi, c
             }
             tests++;
             uint64_t vs = Alo + 30ull * ((uint64_t)s >> 3) + (uint64_t)scls[s & 7u];
-            if (w_live_prime<TESTMODE, FIXED_HI>(vs, Ahi, batchQ, liveState)) {
+            if (w_live_prime<TESTMODE, FIXED_HI,Upper>(vs, Ahi, batchQ, liveState)) {
                 p = s;
                 jumps++;
                 s = p + (int64_t)wtab[p & 7];
@@ -1119,42 +747,8 @@ w_owned_slice(const uint64_t *bm, uint64_t nwords, uint64_t Alo, uint64_t Ahi, c
             }
         }
     done7:
-#if defined(PGN_EULER96_DYNAMIC_SLICES) || defined(PGN_EULER96_CONSERVED_SLICES)
-        ; // Finish this exact ownership interval, then claim another group.
-    }
-#endif
     atomicAdd(&stats[0], tests);
     atomicAdd(&stats[1], jumps);
 }
-
-template <int TESTMODE, uint64_t FIXED_HI = UINT64_MAX>
-__global__ static void W_RESIDENT_CAP walk_kernel7(const uint64_t *__restrict__ bm, uint64_t nwords,
-                                                   uint64_t Alo, uint64_t Ahi,
-                                                   const uint32_t *__restrict__ wtab,
-                                                   uint32_t minGapVal, w_gaprec_t *__restrict__ out,
-                                                   uint32_t cap,
-                                                   unsigned long long *__restrict__ stats) {
-    __shared__ uint32_t scls[8];
-#ifdef PGN_EULER96_BATCH_Q
-    __shared__ uint64_t sharedBatchQ;
-    if (threadIdx.x == 0)
-        sharedBatchQ =
-            TESTMODE == 3
-                ? pgn_euler96::batchQuotient(Alo, FIXED_HI == UINT64_MAX ? Ahi : FIXED_HI, nwords)
-                : 0;
-#endif
-    if (threadIdx.x < 8u)
-        scls[threadIdx.x] = c30_cls[threadIdx.x];
-    __syncthreads();
-#ifdef PGN_EULER96_BATCH_Q
-    const uint64_t batchQ = sharedBatchQ;
-#else
-    constexpr uint64_t batchQ = 0;
-#endif
-    const uint64_t total = (uint64_t)gridDim.x * blockDim.x;
-    const uint64_t tid = (uint64_t)blockIdx.x * blockDim.x + threadIdx.x;
-    w_owned_slice<TESTMODE, FIXED_HI>(bm, nwords, Alo, Ahi, wtab, minGapVal, out, cap, stats, scls,
-                                      batchQ, total, tid);
-}
 #undef W_RESIDENT_CAP
-#endif /* P0_WALK_KERN_CUH */
+#endif

@@ -1,7 +1,11 @@
+#include "candidate_extent.h"
+#include "window_steps.h"
 // GPU-owned interval search with exact endpoint proof before publication.
 // Runtime publication uses the existing phase0 source protocol, not network credit.
 #include "exact_prime_proof.h"
 #include <cuda_runtime.h>
+#include "resident_runtime.h"
+#include "resident_protocol.h"
 #include "portable_platform.h"
 #include <algorithm>
 #include <chrono>
@@ -37,34 +41,477 @@ constexpr uint64_t Words = (1ULL << 28) / 64, BlockNumbers = 30ULL << 25;
 #define PGN_DESCRIPTOR_BLOCKS 64
 #endif
 static unsigned K = PGN_DESCRIPTOR_BLOCKS, SlotBlocks = K + 1;
-static const void *selectWalkKernel(uint64_t high) {
-#define SCOUT_BASE_ENGINE(BITS, HIGH, GAP, STATE_BYTES)                                            \
-    if (high == HIGH##ULL)                                                                         \
-        return reinterpret_cast<const void *>(BITS == 67 ? pgn_graph_walk67_h5 : pgn_graph_walk);
-#define SCOUT_SPECIALIZED_ENGINE(BITS, HIGH, GAP, STATE_BYTES)                                     \
-    if (high == HIGH##ULL)                                                                         \
-        return reinterpret_cast<const void *>(pgn_graph_walk##BITS##_retained_h##HIGH);
-#include "specialized_engines.def"
-#undef SCOUT_SPECIALIZED_ENGINE
-#undef SCOUT_BASE_ENGINE
-    return reinterpret_cast<const void *>(pgn_graph_walk67_80);
+static const void *selectWalkKernel(uint64_t high,bool clipped) {
+ if(high>=4ULL&&high<5ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<67,4ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<67,4ULL,false,false>);
+ }
+ if(high>=5ULL&&high<6ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<67,5ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<67,5ULL,false,false>);
+ }
+ if(high>=6ULL&&high<7ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<67,6ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<67,6ULL,false,false>);
+ }
+ if(high>=7ULL&&high<8ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<67,7ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<67,7ULL,false,false>);
+ }
+ if(high>=8ULL&&high<9ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,8ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,8ULL,false,false>);
+ }
+ if(high>=9ULL&&high<10ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,9ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,9ULL,false,false>);
+ }
+ if(high>=10ULL&&high<11ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,10ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,10ULL,false,false>);
+ }
+ if(high>=11ULL&&high<12ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,11ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,11ULL,false,false>);
+ }
+ if(high>=12ULL&&high<13ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,12ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,12ULL,false,false>);
+ }
+ if(high>=13ULL&&high<14ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,13ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,13ULL,false,false>);
+ }
+ if(high>=14ULL&&high<15ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,14ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,14ULL,false,false>);
+ }
+ if(high>=15ULL&&high<16ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,15ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<68,15ULL,false,false>);
+ }
+ if(high>=16ULL&&high<17ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,16ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,16ULL,false,false>);
+ }
+ if(high>=17ULL&&high<18ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,17ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,17ULL,false,false>);
+ }
+ if(high>=18ULL&&high<19ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,18ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,18ULL,false,false>);
+ }
+ if(high>=19ULL&&high<20ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,19ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,19ULL,false,false>);
+ }
+ if(high>=20ULL&&high<21ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,20ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,20ULL,false,false>);
+ }
+ if(high>=21ULL&&high<22ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,21ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,21ULL,false,false>);
+ }
+ if(high>=22ULL&&high<23ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,22ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,22ULL,false,false>);
+ }
+ if(high>=23ULL&&high<24ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,23ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,23ULL,false,false>);
+ }
+ if(high>=24ULL&&high<25ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,24ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,24ULL,false,false>);
+ }
+ if(high>=25ULL&&high<26ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,25ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,25ULL,false,false>);
+ }
+ if(high>=26ULL&&high<27ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,26ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,26ULL,false,false>);
+ }
+ if(high>=27ULL&&high<28ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,27ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,27ULL,false,false>);
+ }
+ if(high>=28ULL&&high<29ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,28ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,28ULL,false,false>);
+ }
+ if(high>=29ULL&&high<30ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,29ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,29ULL,false,false>);
+ }
+ if(high>=30ULL&&high<31ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,30ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,30ULL,false,false>);
+ }
+ if(high>=31ULL&&high<32ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,31ULL,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<69,31ULL,false,false>);
+ }
+ if(high>=32ULL&&high<64ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<70,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<70,UINT64_MAX,false,false>);
+ }
+ if(high>=64ULL&&high<128ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<71,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<71,UINT64_MAX,false,false>);
+ }
+ if(high>=128ULL&&high<232ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<72,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<72,UINT64_MAX,false,false>);
+ }
+ if(high>=232ULL&&high<256ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<72,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<72,UINT64_MAX,true,false>);
+ }
+ if(high>=256ULL&&high<335ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<73,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<73,UINT64_MAX,false,false>);
+ }
+ if(high>=335ULL&&high<512ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<73,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<73,UINT64_MAX,true,false>);
+ }
+ if(high>=512ULL&&high<703ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<74,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<74,UINT64_MAX,false,false>);
+ }
+ if(high>=703ULL&&high<1024ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<74,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<74,UINT64_MAX,true,false>);
+ }
+ if(high>=1024ULL&&high<1148ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<75,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<75,UINT64_MAX,false,false>);
+ }
+ if(high>=1148ULL&&high<2048ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<75,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<75,UINT64_MAX,true,false>);
+ }
+ if(high>=2048ULL&&high<4096ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<76,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<76,UINT64_MAX,false,false>);
+ }
+ if(high>=4096ULL&&high<8192ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<77,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<77,UINT64_MAX,false,false>);
+ }
+ if(high>=8192ULL&&high<16384ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<78,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<78,UINT64_MAX,false,false>);
+ }
+ if(high>=16384ULL&&high<23167ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<79,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<79,UINT64_MAX,false,false>);
+ }
+ if(high>=23167ULL&&high<32768ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<79,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<79,UINT64_MAX,true,false>);
+ }
+ if(high>=32768ULL&&high<65536ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<80,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<80,UINT64_MAX,false,false>);
+ }
+ if(high>=65536ULL&&high<131072ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<81,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<81,UINT64_MAX,false,false>);
+ }
+ if(high>=131072ULL&&high<196608ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<82,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<82,UINT64_MAX,false,false>);
+ }
+ if(high>=196608ULL&&high<262144ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<82,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<82,UINT64_MAX,true,false>);
+ }
+ if(high>=262144ULL&&high<524288ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<83,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<83,UINT64_MAX,false,false>);
+ }
+ if(high>=524288ULL&&high<1048576ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<84,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<84,UINT64_MAX,false,false>);
+ }
+ if(high>=1048576ULL&&high<2097152ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<85,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<85,UINT64_MAX,false,false>);
+ }
+ if(high>=2097152ULL&&high<3145728ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<86,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<86,UINT64_MAX,false,false>);
+ }
+ if(high>=3145728ULL&&high<4194304ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<86,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<86,UINT64_MAX,true,false>);
+ }
+ if(high>=4194304ULL&&high<5242880ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<87,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<87,UINT64_MAX,false,false>);
+ }
+ if(high>=5242880ULL&&high<8388608ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<87,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<87,UINT64_MAX,true,false>);
+ }
+ if(high>=8388608ULL&&high<16777216ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<88,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<88,UINT64_MAX,false,false>);
+ }
+ if(high>=16777216ULL&&high<33554432ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<89,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<89,UINT64_MAX,false,false>);
+ }
+ if(high>=33554432ULL&&high<67108864ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<90,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<90,UINT64_MAX,false,false>);
+ }
+ if(high>=67108864ULL&&high<134217728ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<91,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<91,UINT64_MAX,false,false>);
+ }
+ if(high>=134217728ULL&&high<206941441ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<92,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<92,UINT64_MAX,false,false>);
+ }
+ if(high>=206941441ULL&&high<268435456ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<92,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<92,UINT64_MAX,true,false>);
+ }
+ if(high>=268435456ULL&&high<292659403ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<93,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<93,UINT64_MAX,false,false>);
+ }
+ if(high>=292659403ULL&&high<536870912ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<93,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<93,UINT64_MAX,true,false>);
+ }
+ if(high>=536870912ULL&&high<585318807ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<94,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<94,UINT64_MAX,false,false>);
+ }
+ if(high>=585318807ULL&&high<1073741824ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<94,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<94,UINT64_MAX,true,false>);
+ }
+ if(high>=1073741824ULL&&high<1342177280ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<95,UINT64_MAX,false,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<95,UINT64_MAX,false,false>);
+ }
+ if(high>=1342177280ULL&&high<2147483648ULL){
+  if(clipped)return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<95,UINT64_MAX,true,true>);
+  return reinterpret_cast<const void *>(pgn_graph_walk_optimized_width<95,UINT64_MAX,true,false>);
+ }
+ return nullptr;
 }
 static const void *selectVerifyKernel(uint64_t high) {
-#define SCOUT_BASE_ENGINE(BITS, HIGH, GAP, STATE_BYTES)                                            \
-    if (high == HIGH##ULL)                                                                         \
-        return reinterpret_cast<const void *>(BITS == 67 ? pgn_graph_verify67_h5                   \
-                                                         : pgn_graph_verify68_h10);
-#define SCOUT_SPECIALIZED_ENGINE(BITS, HIGH, GAP, STATE_BYTES)                                     \
-    if (high == HIGH##ULL)                                                                         \
-        return reinterpret_cast<const void *>(pgn_graph_verify##BITS##_retained_h##HIGH);
-#include "specialized_engines.def"
-#undef SCOUT_SPECIALIZED_ENGINE
-#undef SCOUT_BASE_ENGINE
-    return reinterpret_cast<const void *>(pgn_graph_verify);
+ if(high>=4ULL&&high<5ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<67,4ULL,false>);
+ }
+ if(high>=5ULL&&high<6ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<67,5ULL,false>);
+ }
+ if(high>=6ULL&&high<7ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<67,6ULL,false>);
+ }
+ if(high>=7ULL&&high<8ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<67,7ULL,false>);
+ }
+ if(high>=8ULL&&high<9ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<68,8ULL,false>);
+ }
+ if(high>=9ULL&&high<10ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<68,9ULL,false>);
+ }
+ if(high>=10ULL&&high<11ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<68,10ULL,false>);
+ }
+ if(high>=11ULL&&high<12ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<68,11ULL,false>);
+ }
+ if(high>=12ULL&&high<13ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<68,12ULL,false>);
+ }
+ if(high>=13ULL&&high<14ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<68,13ULL,false>);
+ }
+ if(high>=14ULL&&high<15ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<68,14ULL,false>);
+ }
+ if(high>=15ULL&&high<16ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<68,15ULL,false>);
+ }
+ if(high>=16ULL&&high<17ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,16ULL,false>);
+ }
+ if(high>=17ULL&&high<18ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,17ULL,false>);
+ }
+ if(high>=18ULL&&high<19ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,18ULL,false>);
+ }
+ if(high>=19ULL&&high<20ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,19ULL,false>);
+ }
+ if(high>=20ULL&&high<21ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,20ULL,false>);
+ }
+ if(high>=21ULL&&high<22ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,21ULL,false>);
+ }
+ if(high>=22ULL&&high<23ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,22ULL,false>);
+ }
+ if(high>=23ULL&&high<24ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,23ULL,false>);
+ }
+ if(high>=24ULL&&high<25ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,24ULL,false>);
+ }
+ if(high>=25ULL&&high<26ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,25ULL,false>);
+ }
+ if(high>=26ULL&&high<27ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,26ULL,false>);
+ }
+ if(high>=27ULL&&high<28ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,27ULL,false>);
+ }
+ if(high>=28ULL&&high<29ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,28ULL,false>);
+ }
+ if(high>=29ULL&&high<30ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,29ULL,false>);
+ }
+ if(high>=30ULL&&high<31ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,30ULL,false>);
+ }
+ if(high>=31ULL&&high<32ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<69,31ULL,false>);
+ }
+ if(high>=32ULL&&high<64ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<70,UINT64_MAX,false>);
+ }
+ if(high>=64ULL&&high<128ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<71,UINT64_MAX,false>);
+ }
+ if(high>=128ULL&&high<232ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<72,UINT64_MAX,false>);
+ }
+ if(high>=232ULL&&high<256ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<72,UINT64_MAX,true>);
+ }
+ if(high>=256ULL&&high<335ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<73,UINT64_MAX,false>);
+ }
+ if(high>=335ULL&&high<512ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<73,UINT64_MAX,true>);
+ }
+ if(high>=512ULL&&high<703ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<74,UINT64_MAX,false>);
+ }
+ if(high>=703ULL&&high<1024ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<74,UINT64_MAX,true>);
+ }
+ if(high>=1024ULL&&high<1148ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<75,UINT64_MAX,false>);
+ }
+ if(high>=1148ULL&&high<2048ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<75,UINT64_MAX,true>);
+ }
+ if(high>=2048ULL&&high<4096ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<76,UINT64_MAX,false>);
+ }
+ if(high>=4096ULL&&high<8192ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<77,UINT64_MAX,false>);
+ }
+ if(high>=8192ULL&&high<16384ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<78,UINT64_MAX,false>);
+ }
+ if(high>=16384ULL&&high<23167ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<79,UINT64_MAX,false>);
+ }
+ if(high>=23167ULL&&high<32768ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<79,UINT64_MAX,true>);
+ }
+ if(high>=32768ULL&&high<65536ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<80,UINT64_MAX,false>);
+ }
+ if(high>=65536ULL&&high<131072ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<81,UINT64_MAX,false>);
+ }
+ if(high>=131072ULL&&high<196608ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<82,UINT64_MAX,false>);
+ }
+ if(high>=196608ULL&&high<262144ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<82,UINT64_MAX,true>);
+ }
+ if(high>=262144ULL&&high<524288ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<83,UINT64_MAX,false>);
+ }
+ if(high>=524288ULL&&high<1048576ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<84,UINT64_MAX,false>);
+ }
+ if(high>=1048576ULL&&high<2097152ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<85,UINT64_MAX,false>);
+ }
+ if(high>=2097152ULL&&high<3145728ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<86,UINT64_MAX,false>);
+ }
+ if(high>=3145728ULL&&high<4194304ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<86,UINT64_MAX,true>);
+ }
+ if(high>=4194304ULL&&high<5242880ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<87,UINT64_MAX,false>);
+ }
+ if(high>=5242880ULL&&high<8388608ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<87,UINT64_MAX,true>);
+ }
+ if(high>=8388608ULL&&high<16777216ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<88,UINT64_MAX,false>);
+ }
+ if(high>=16777216ULL&&high<33554432ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<89,UINT64_MAX,false>);
+ }
+ if(high>=33554432ULL&&high<67108864ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<90,UINT64_MAX,false>);
+ }
+ if(high>=67108864ULL&&high<134217728ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<91,UINT64_MAX,false>);
+ }
+ if(high>=134217728ULL&&high<206941441ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<92,UINT64_MAX,false>);
+ }
+ if(high>=206941441ULL&&high<268435456ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<92,UINT64_MAX,true>);
+ }
+ if(high>=268435456ULL&&high<292659403ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<93,UINT64_MAX,false>);
+ }
+ if(high>=292659403ULL&&high<536870912ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<93,UINT64_MAX,true>);
+ }
+ if(high>=536870912ULL&&high<585318807ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<94,UINT64_MAX,false>);
+ }
+ if(high>=585318807ULL&&high<1073741824ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<94,UINT64_MAX,true>);
+ }
+ if(high>=1073741824ULL&&high<1342177280ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<95,UINT64_MAX,false>);
+ }
+ if(high>=1342177280ULL&&high<2147483648ULL){
+  return reinterpret_cast<const void *>(pgn_graph_verify_optimized_width<95,UINT64_MAX,true>);
+ }
+ return nullptr;
 }
 static const char *pgn_release_backend_name(uint64_t high) {
     const auto *engine = scout::engineForHigh(high);
-    return engine ? engine->name : "euler96_general";
+    return engine ? engine->name : "optimized_unavailable";
 }
 
 constexpr unsigned Capacity = 4096;
@@ -331,7 +778,7 @@ static uint64_t pgnPreAllocationBytes() {
 }
 static pgn_release_plan::Memory pgnMemoryPlan(const pgn_release_plan::Range &range,
                                               const PgnHostTables &tables, uint64_t freeBytes) {
-    static_assert(sizeof(PgnWalkDescriptor) == 24 && sizeof(PgnWalkGraphState) == 12 &&
+    static_assert(sizeof(PgnWalkDescriptor) == 40 && sizeof(PgnWalkGraphState) == 12 &&
                       sizeof(w_gaprec_t) == 16,
                   "Plan/allocation ABI must agree");
     return pgn_release_plan::memory(range, K, PgnDescriptorLanes, tables.primes.size(),
@@ -352,7 +799,7 @@ static void printMemoryPlan(Number128 requested, uint64_t length,
                          : memory.fits ? "ok"
                                        : "insufficient_free_device_memory";
     std::printf(
-        "{\"schema\":\"pgn-memory-plan-1\",\"gap_runtime_schema\":\"PGN_NATIVE_GAP_RUNTIME_V1\","
+        "{\"schema\":\"pgn-memory-plan-1\",\"gap_runtime_schema\":\"PGN_NATIVE_GAP_RUNTIME_V1\",\"optimized_domain_schema\":\"SCOUT_WORD_DOMAINS_V1\",\"optimized_high_begin\":4,\"optimized_high_end\":2147483648,\"word_tail_clipping\":true,\"minimum_gap_floor\":30,\"bounded_scan\":true,"
         "\"gap_min\":%u,\"arithmetic_backend\":\"%s\",\"profile_k\":%u,\"build_arch\":%u,\"range_"
         "valid\":%s,\"fits\":%s,\"reason\":%s,\"start\":%s,\"length\":%s,\"high_word\":%llu,\"base_"
         "low\":%llu,\"floor_remainder\":%llu,\"blocks\":%llu,\"descriptor_count\":%llu,\"bitmap_"
@@ -396,7 +843,7 @@ static void printCapabilities() {
         if (!first)
             std::fputc(',', stdout);
         first = false;
-        std::printf("%llu", (unsigned long long)e.highWord);
+        std::printf("%llu", (unsigned long long)e.highFirst);
     }
     std::fputs("],\"retained_points\":[", stdout);
     first = true;
@@ -405,12 +852,14 @@ static void printCapabilities() {
             std::fputc(',', stdout);
         first = false;
         std::printf("{\"bits\":%u,\"high\":%llu,\"auto_gap_min\":%u,\"state_bytes\":%u}", e.bits,
-                    (unsigned long long)e.highWord, e.automaticGap, e.stateBytes);
+                    (unsigned long long)e.highFirst, e.automaticGap, e.stateBytes);
     }
-    std::fputs("]}\n", stdout);
+    std::fputs("],\"optimized_coverage_complete\":false,\"optimized_high_domains\":["
+               "{\"bits\":67,\"first\":4,\"end\":8},"
+               "{\"bits\":68,\"first\":8,\"end\":16}] }\n", stdout);
 }
 static int pgnWorkerMain(int argc, char **argv) {
-    std::setvbuf(stdout, nullptr, _IONBF, 0);
+    pgnActiveGapMin = 960; // Every command starts from the documented default.
 #ifdef __linux__
     const int ownerGuard = pgnInstallOwnerPidGuard(argc, argv);
     if (ownerGuard)
@@ -474,9 +923,9 @@ static int pgnWorkerMain(int argc, char **argv) {
 #endif
         else if (option == "--gap-min") {
             Number128 minimum{};
-            if (!parseNumber(value, minimum) || minimum.high || minimum.low < 954 ||
+            if (!parseNumber(value, minimum) || minimum.high || minimum.low < 30 ||
                 minimum.low > 2147483647ULL) {
-                std::fprintf(stderr, "gap-min must be an integer954..2147483647\n");
+                std::fprintf(stderr, "gap-min must be an integer30..2147483647\n");
                 return 1;
             }
             gapMin = unsigned(minimum.low);
@@ -484,9 +933,9 @@ static int pgnWorkerMain(int argc, char **argv) {
             pgnActiveGapMin = gapMin;
         } else if (option == "--emit-min-gap") {
             Number128 minimum{};
-            if (!parseNumber(value, minimum) || minimum.high || minimum.low < 954 ||
+            if (!parseNumber(value, minimum) || minimum.high || minimum.low < 30 ||
                 minimum.low > UINT32_MAX) {
-                std::fprintf(stderr, "emit-min-gap must be an integer954..4294967295\n");
+                std::fprintf(stderr, "emit-min-gap must be an integer30..4294967295\n");
                 return 1;
             }
             emitMinGap = unsigned(minimum.low);
@@ -533,6 +982,11 @@ static int pgnWorkerMain(int argc, char **argv) {
         return 1;
     }
     const uint64_t length = len.low;
+    if (!scout::engineForHigh(requested.high)) {
+        std::fprintf(stderr, "No validated optimized engine for this interval; no GPU work started. "
+                             "The saved range and checkpoint are retained.\n");
+        return 7;
+    }
     const auto originalRange = pgn_release_plan::range(requested.low, requested.high, length, K);
     if (!originalRange.valid) {
         if (planOnly)
@@ -612,7 +1066,7 @@ static int pgnWorkerMain(int argc, char **argv) {
     if (scout::needsEndpointProof(requested.low, requested.high))
         exactProof.initialize();
     std::printf("[pgn-selected-backend] family=%s high=%llu gap_min=%u profile_k=%u "
-                "retained67_95_points=29\n",
+                "coverage=67_95_all_high_words\n",
                 pgn_release_backend_name(requested.high), (unsigned long long)requested.high,
                 gapMin, K);
     PgnWalkGraphBuffers buffers{};
@@ -640,19 +1094,16 @@ static int pgnWorkerMain(int argc, char **argv) {
                 if ((p * x) % 30 == 1)
                     inverse[p] = x;
         }
-    for (unsigned c = 0; c < 8; ++c)
-        for (unsigned t = 1; t < GapMin; ++t)
-            if (class_index[(classes[c] + t) % 30] >= 0)
-                ++steps[c];
+    scout_wheel::window_steps(GapMin,classes,class_index,steps);
     CHECK(cudaMemcpyToSymbol(c30_clsidx, class_index, sizeof(class_index)));
     CHECK(cudaMemcpyToSymbol(c30_perm, permutation, sizeof(permutation)));
     CHECK(cudaMemcpyToSymbol(c30_pinv, inverse, sizeof(inverse)));
 
     CHECK(cudaFuncSetAttribute(pgn_graph_mark, cudaFuncAttributeMaxDynamicSharedMemorySize, 65536));
-    // Private causal test: give all graph kernels the same shared/L1 preference.
+    // Give all graph kernels the same shared/L1 preference.
     CHECK(
         cudaFuncSetAttribute(pgn_graph_mark, cudaFuncAttributePreferredSharedMemoryCarveout, 100));
-    const void *selectedWalk = selectWalkKernel(requested.high);
+    const void *selectedWalk = selectWalkKernel(requested.high,resumedRange.tailClipped);
     const void *selectedVerify = selectVerifyKernel(requested.high);
     CHECK(cudaFuncSetAttribute(selectedWalk, cudaFuncAttributePreferredSharedMemoryCarveout, 100));
     CHECK(
@@ -677,6 +1128,15 @@ static int pgnWorkerMain(int argc, char **argv) {
         const unsigned owned = unsigned(std::min<uint64_t>(K, blocks - first));
         descriptors[i] = {baseLow + first * BlockNumbers, requested.high,
                           owned + (first + owned < blocks ? 1u : 0u), owned};
+        auto &descriptor=descriptors[i];
+        const uint64_t span=uint64_t(descriptor.bitmap_blocks)*BlockNumbers;
+        if(span>=(1ULL<<36)||!span)return 2;
+        const auto last=span-1>UINT64_MAX-descriptor.low?UINT64_MAX:descriptor.low+span-1;
+        const auto prepared=scout_arithmetic::prepare_domain(last,uint32_t(requested.high));
+        descriptor.arithmetic_mu=prepared.muLower;descriptor.arithmetic_coefficient=prepared.coefficient;
+        const auto requestedLast=requested.low+(length-1);
+        if(descriptor.low>requestedLast)return 2;
+        descriptor.scan_slots=scout_extent::candidate_slots(requestedLast-descriptor.low,uint64_t(descriptor.bitmap_blocks)<<28,classes);
     }
     uint64_t *d_primes{}, *d_reciprocals{}, *d_r64{};
     uint32_t *d_items{}, *d_chunks{}, *d_wheel{}, *d_steps{};
@@ -784,7 +1244,10 @@ static int pgnWorkerMain(int argc, char **argv) {
     // A compiler may reserve additional per-block shared storage on a newer
     // architecture. Admission depends on the actual function attributes and
     // device limit, rather than one architecture's exact static byte count.
-    if (markerSms < 1 || markerAttributes.numRegs > 48 || walkerAttributes.numRegs > 40 ||
+    int walkerBlocks=0;
+    CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(&walkerBlocks,selectedWalk,512,0));
+    std::printf("[pgn-walker-resource-admission] registers=%d threads=512 resident_blocks_per_SM=%d\n",walkerAttributes.numRegs,walkerBlocks);
+    if (markerSms < 1 || markerAttributes.numRegs > 48 || walkerBlocks < 1 ||
         sharedBlockLimit <= 0 ||
         markerAttributes.sharedSizeBytes + 65536 > size_t(sharedBlockLimit)) {
         std::fprintf(stderr,
@@ -904,14 +1367,15 @@ static int pgnWorkerMain(int argc, char **argv) {
             if (count >= Capacity)
                 return 4;
             const auto d = descriptors[next];
-            const uint64_t ownedEnd = d.low + uint64_t(d.owned_blocks) * BlockNumbers;
+            const uint64_t ownedLength = uint64_t(d.owned_blocks) * BlockNumbers;
             // Validate the complete descriptor before emitting any of its results or
             // advancing its durable prefix. A screen positive is never a proof above
             // the deterministic MR13 bound; rejection leaves this prefix uncredited.
             for (unsigned row = 1; row <= count; ++row) {
                 const auto g = rows[row];
-                if (g.slot < resumeLow || g.slot < d.low || g.slot >= ownedEnd ||
-                    g.slot + g.gap >= requested.low + length)
+                if (g.slot < resumeLow || g.slot < d.low || g.slot - d.low >= ownedLength ||
+                    g.slot < requested.low || g.slot - requested.low >= length ||
+                    uint64_t(g.gap) >= length - (g.slot - requested.low))
                     continue;
                 if (scout::needsEndpointProof(g.slot, requested.high) ||
                     scout::needsEndpointProof(g.slot + g.gap, requested.high)) {
@@ -925,8 +1389,9 @@ static int pgnWorkerMain(int argc, char **argv) {
             }
             for (unsigned row = 1; row <= count; ++row) {
                 const auto g = rows[row];
-                if (g.slot < resumeLow || g.slot < d.low || g.slot >= ownedEnd ||
-                    g.slot + g.gap >= requested.low + length)
+                if (g.slot < resumeLow || g.slot < d.low || g.slot - d.low >= ownedLength ||
+                    g.slot < requested.low || g.slot - requested.low >= length ||
+                    uint64_t(g.gap) >= length - (g.slot - requested.low))
                     continue;
                 ++gaps;
                 if (g.gap < emitMinGap)
@@ -1035,6 +1500,7 @@ static int pgnWorkerMain(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
     // Runtime K is selected by the shipped profile filename, with one exact code body.
     {
         std::string name = argc ? argv[0] : "";
@@ -1051,7 +1517,79 @@ int main(int argc, char **argv) {
         }
     }
     try {
-        return pgnWorkerMain(argc, argv);
+        std::string directory, nonce;
+        std::vector<std::string> current;
+        current.reserve(argc);
+        for (int index = 0; index < argc; ++index) {
+            const std::string option = argv[index];
+            if (index && (option == "--resident-directory" || option == "--resident-nonce")) {
+                if (++index >= argc)
+                    throw std::runtime_error("Missing resident option");
+                (option == "--resident-directory" ? directory : nonce) = argv[index];
+            } else {
+                current.push_back(option);
+            }
+        }
+        if (directory.empty()) {
+            if (!nonce.empty())
+                throw std::runtime_error("Resident nonce without directory");
+            return pgnWorkerMain(argc, argv);
+        }
+        const auto folder = std::filesystem::u8path(directory);
+        if (!scout_resident::valid_nonce(nonce) || !std::filesystem::is_directory(folder))
+            throw std::runtime_error("Invalid resident owner directory/nonce");
+        scout_resident::arena.enabled = true;
+        uint64_t sequence = 0;
+        std::filesystem::path stop;
+        for (;;) {
+            for (size_t index = 1; index + 1 < current.size(); ++index) {
+                if (current[index] == "--stop-file")
+                    stop = std::filesystem::u8path(current[index + 1]);
+            }
+            scout_resident::arena.begin();
+            std::vector<char*> pointers;
+            for (auto& argument : current)
+                pointers.push_back(argument.data());
+            pointers.push_back(nullptr);
+            const auto began = std::chrono::steady_clock::now();
+            const int code = pgnWorkerMain(int(current.size()), pointers.data());
+            if (code == 0) {
+                const auto cleanup = scout_resident::arena.end();
+                if (cleanup != cudaSuccess) {
+                    std::fprintf(stderr, "Resident resource closure failed: %s\n",
+                                 cudaGetErrorString(cleanup));
+                    return 9;
+                }
+            }
+            const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now() - began).count();
+            scout_resident::result(folder, sequence, nonce, code, uint64_t(duration),
+                                   scout_resident::arena.device_bytes());
+            std::fflush(stdout);
+            if (code)
+                return code;
+            if (std::filesystem::exists(folder / "shutdown") ||
+                (!stop.empty() && std::filesystem::exists(stop)))
+                return 0;
+            ++sequence;
+            const auto request = scout_resident::frame_path(folder, sequence, ".args");
+            while (!std::filesystem::exists(request)) {
+                if (std::filesystem::exists(folder / "shutdown") ||
+                    (!stop.empty() && std::filesystem::exists(stop)))
+                    return 0;
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+            auto next = scout_resident::read_request(request);
+            for (const auto& argument : next.args) {
+                if (argument == "--resident-directory" || argument == "--resident-nonce" ||
+                    argument == "--self-test" || argument == "--fermat-diagnostic")
+                    throw std::runtime_error("Unsupported command in resident search owner");
+            }
+            nonce = std::move(next.nonce);
+            current.resize(1);
+            for (auto& argument : next.args)
+                current.push_back(std::move(argument));
+        }
     } catch (const std::exception &error) {
         std::fprintf(stderr, "PGN host failure: %s; process exits without further CUDA calls\n",
                      error.what());

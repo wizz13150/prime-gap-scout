@@ -2,7 +2,13 @@
 
 from pathlib import Path
 import contextlib, hashlib, io, os, re, shlex
-from pgn_launcher import GROUPS, BOOLS, DEFAULTS, argv_from_environment, validate_coverage
+from pgn_launcher import (
+    GROUPS,
+    BOOLS,
+    DEFAULTS,
+    argv_from_environment,
+    validate_coverage,
+)
 
 
 class LauncherDraft:
@@ -15,7 +21,9 @@ class LauncherDraft:
         self.actions = validate_coverage(parser)
         self.original = self.path.read_bytes()
         self.digest = hashlib.sha256(self.original).hexdigest()
-        self.encoding = "utf-8-sig" if self.original.startswith(b"\xef\xbb\xbf") else "utf-8"
+        self.encoding = (
+            "utf-8-sig" if self.original.startswith(b"\xef\xbb\xbf") else "utf-8"
+        )
         self.lines = self.original.decode(self.encoding).splitlines(keepends=True)
         self.values = {}
         self.positions = {}
@@ -24,9 +32,13 @@ class LauncherDraft:
         for index, line in enumerate(self.lines):
             stripped = line.strip()
             if self.path.suffix.lower() == ".cmd":
-                match = re.fullmatch(r'(?i)set\s+"([A-Z_][A-Z_0-9]*)=([^"\r\n]*)"', stripped)
+                match = re.fullmatch(
+                    r'(?i)set\s+"([A-Z_][A-Z_0-9]*)=([^"\r\n]*)"', stripped
+                )
                 if match is None:
-                    match = re.fullmatch(r"(?i)set\s+([A-Z_][A-Z_0-9]*)=([^\r\n]*)", stripped)
+                    match = re.fullmatch(
+                        r"(?i)set\s+([A-Z_][A-Z_0-9]*)=([^\r\n]*)", stripped
+                    )
                 if not match:
                     continue
                 name, value = match.groups()
@@ -38,7 +50,9 @@ class LauncherDraft:
                 try:
                     parts = shlex.split(source, posix=True)
                 except ValueError as error:
-                    raise ValueError("Unsupported literal assignment for " + name) from error
+                    raise ValueError(
+                        "Unsupported literal assignment for " + name
+                    ) from error
                 if len(parts) > 1:
                     raise ValueError("Launcher value is not one literal: " + name)
                 value = parts[0] if parts else ""
@@ -47,7 +61,9 @@ class LauncherDraft:
                 continue
             if name in self.positions:
                 raise ValueError(
-                    "Multiple assignments for " + name + "; edit this custom script manually"
+                    "Multiple assignments for "
+                    + name
+                    + "; edit this custom script manually"
                 )
             self.positions[name] = index
             self.values[name] = value
@@ -61,6 +77,8 @@ class LauncherDraft:
         self.initial = dict(self.values)
 
     def validate(self):
+        from pgn_threshold_pointwise import MINIMUM_GAP
+
         for flag in BOOLS:
             if self.values[flag.upper()] not in ("0", "1"):
                 raise ValueError(flag.upper() + " must be0 or1")
@@ -79,9 +97,11 @@ class LauncherDraft:
                 if (
                     not value.is_finite()
                     or value != value.to_integral_value()
-                    or not 954 <= value <= 2147483647
+                    or not MINIMUM_GAP <= value <= 2147483647
                 ):
-                    raise ValueError(key + " must be an integer954..2147483647")
+                    raise ValueError(
+                        key + f" must be an integer{MINIMUM_GAP}..2147483647"
+                    )
         argv = argv_from_environment(self.values)
         output = io.StringIO()
         try:
@@ -103,7 +123,9 @@ class LauncherDraft:
     def save(self):
         self.validate()
         if hashlib.sha256(self.path.read_bytes()).hexdigest() != self.digest:
-            raise RuntimeError("Launcher changed on disk. Draft is preserved; reload before saving")
+            raise RuntimeError(
+                "Launcher changed on disk. Draft is preserved; reload before saving"
+            )
         lines = list(self.lines)
         for name, value in self.values.items():
             if value == self.initial[name]:
@@ -111,13 +133,17 @@ class LauncherDraft:
             if any(char in value for char in ("\0", "\r", "\n")):
                 raise ValueError("A launcher value cannot contain a control/newline")
             old = lines[self.positions[name]]
-            ending = "\r\n" if old.endswith("\r\n") else "\n" if old.endswith("\n") else ""
+            ending = (
+                "\r\n" if old.endswith("\r\n") else "\n" if old.endswith("\n") else ""
+            )
             if self.path.suffix.lower() == ".cmd":
                 if '"' in value:
                     raise ValueError("CMD values cannot contain double quotes")
                 replacement = 'set "' + name + "=" + value + '"'
             else:
-                replacement = "export " + name + "='" + value.replace("'", "'\"'\"'") + "'"
+                replacement = (
+                    "export " + name + "='" + value.replace("'", "'\"'\"'") + "'"
+                )
             lines[self.positions[name]] = replacement + ending
         data = "".join(lines).encode(self.encoding)
         backup = self.path.with_name(self.path.name + ".bak")

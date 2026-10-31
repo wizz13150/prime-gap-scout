@@ -34,13 +34,16 @@ if getattr(sys, "frozen", False) and (_ui_dir / "console_ui.py").is_file():
     import importlib.util as _ui_import
 
     for _ui_name in ("pgn_dashboard", "console_ui"):
-        _ui_spec = _ui_import.spec_from_file_location(_ui_name, _ui_dir / (_ui_name + ".py"))
+        _ui_spec = _ui_import.spec_from_file_location(
+            _ui_name, _ui_dir / (_ui_name + ".py")
+        )
         _ui_module = _ui_import.module_from_spec(_ui_spec)
         sys.modules[_ui_name] = _ui_module
         _ui_spec.loader.exec_module(_ui_module)
     Dashboard = sys.modules["console_ui"].Dashboard
 else:
     from console_ui import Dashboard
+from pgn_launcher import launcher_requested
 from pgn_output import default_output_base, complete_counts_text, top_rows
 from pgn_session import SessionStore, SessionControllerLock, read_session_metadata
 from pgn_start_failures import remember_start_failure, restore_start_failure
@@ -57,8 +60,7 @@ from pgn_native_contract import (
 )
 
 from scout_version import VERSION
-H10_MIN = 10 << 64
-H10_END = 11 << 64
+
 MR_LIMIT = 3317044064679887385961981
 MR_BASES = (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41)
 COUNTERS = re.compile(r"\[pgn-counters\].*?\bpositions=(\d+)\b.*?\btests=(\d+)\b")
@@ -122,9 +124,11 @@ def apply_new_parameters(args, values):
 def argument_parser():
     parser = argparse.ArgumentParser(
         description="Local67..95-bit prime-gap search on one CUDA GPU; no PGN network submission.",
-        epilog="Runtime67..95 domain; actual Native plan, threshold echo, image metadata and low64/halo guards are mandatory. Unimplemented seams are rejected, never skipped. GPU sm86 or sm120. No clock/power/fan changes.",
+        epilog="Searches67..95-bit ranges with automatic bit and threshold transitions. Native plans verify memory, effective threshold and worker identity before launch. GPU sm86 or sm120. No clock/power/fan changes.",
     )
-    parser.add_argument("--version", action="version", version="Prime Gap Scout " + VERSION)
+    parser.add_argument(
+        "--version", action="version", version="Prime Gap Scout " + VERSION
+    )
     parser.add_argument(
         "--gpu",
         type=int,
@@ -143,7 +147,9 @@ def argument_parser():
     )
     bounds = parser.add_mutually_exclusive_group()
     bounds.add_argument(
-        "--end", type=exact_integer, help="Exclusive endpoint; omit both end/length for START+1e15"
+        "--end",
+        type=exact_integer,
+        help="Exclusive endpoint; omit both end/length for START+1e15",
     )
     bounds.add_argument(
         "--length", type=exact_integer, help="Exact interval length instead of --end"
@@ -152,7 +158,7 @@ def argument_parser():
         "--min-gap",
         type=requested_gap,
         default="auto",
-        help="Auto uses the pinned67..95 integer table; manual integer954..2147483647. Actual worker plan and checkpoint must bind the effective value",
+        help="Auto follows the local retained-merit policy in steps of two. Manual bounds are shown in parameter help; each worker plan binds its local effective value",
     )
     parser.add_argument(
         "--count-gap",
@@ -237,11 +243,17 @@ def argument_parser():
     parser.add_argument(
         "--name", default="Robert", help="Name printed in the Brian-compatible report"
     )
-    parser.add_argument("--worker", type=Path, help="Advanced: explicit local pgn68-worker path")
+    parser.add_argument(
+        "--worker", type=Path, help="Advanced: explicit local pgn68-worker path"
+    )
     modes = parser.add_mutually_exclusive_group()
-    modes.add_argument("--self-test", action="store_true", help="Run the worker self-test and exit")
     modes.add_argument(
-        "--fermat-diagnostic", action="store_true", help="Run the worker Fermat diagnostic and exit"
+        "--self-test", action="store_true", help="Run the worker self-test and exit"
+    )
+    modes.add_argument(
+        "--fermat-diagnostic",
+        action="store_true",
+        help="Run the worker Fermat diagnostic and exit",
     )
     parser.add_argument(
         "--skip-self-test",
@@ -254,7 +266,9 @@ def argument_parser():
         help="Read nvidia-smi once per second into a CSV; never change settings",
     )
     parser.add_argument(
-        "--archive", action="store_true", help="Also create a ZIP of this new run directory"
+        "--archive",
+        action="store_true",
+        help="Also create a ZIP of this new run directory",
     )
     return parser
 
@@ -325,34 +339,11 @@ def resolve_worker(explicit=None, architecture=None, profile=None):
 def child_options():
     # Isolate Ctrl+C: the frontend publishes stop.request instead of killing CUDA.
     if os.name == "nt":
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW}
+        return {
+            "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP
+            | subprocess.CREATE_NO_WINDOW
+        }
     return {"start_new_session": True}
-
-
-def resolve_checkpoint_worker(identity, architecture, profile):
-    """Resume with the exact installed image that produced the checkpoint."""
-    expected = str(identity.get("worker_sha256", "")).upper()
-    if not re.fullmatch(r"[0-9A-F]{64}", expected):
-        raise ValueError("Invalid checkpoint worker identity")
-    if profile not in (8, 16, 32, 64) or not re.fullmatch(r"sm[0-9]{2,3}", str(architecture)):
-        raise ValueError("Invalid checkpoint architecture/profile")
-    current = resolve_worker(None, architecture, profile)
-    if file_sha256(current) == expected:
-        return current
-    root = (
-        Path(sys.executable).resolve().parent
-        if getattr(sys, "frozen", False)
-        else Path(__file__).resolve().parent
-    )
-    suffix = ".exe" if os.name == "nt" else ""
-    candidate = (
-        root / "bin" / "compat" / expected / f"pgn68-worker-{architecture}-k{profile}{suffix}"
-    )
-    if candidate.is_file() and file_sha256(candidate) == expected:
-        return candidate
-    raise RuntimeError(
-        "This checkpoint requires its original worker image. Keep bin/compat from the complete release; the saved range has not been changed."
-    )
 
 
 def enumerate_gpus(worker):
@@ -380,9 +371,13 @@ def select_gpu(devices, index):
         raise RuntimeError(f"GPU {index} is not visible; use --list-gpus")
     device = found[0]
     if (device.get("cc_major"), device.get("cc_minor")) not in ((8, 6), (12, 0)):
-        raise RuntimeError("Selected GPU is unsupported: this release admits sm86 or sm120 only")
+        raise RuntimeError(
+            "Selected GPU is unsupported: this release admits sm86 or sm120 only"
+        )
     uuid = device.get("uuid", "")
-    if not re.fullmatch(r"GPU-[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", uuid):
+    if not re.fullmatch(
+        r"GPU-[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", uuid
+    ):
         raise RuntimeError(
             "Worker did not provide an authentic device UUID; refusing ambiguous GPU selection"
         )
@@ -403,7 +398,9 @@ def new_run_directory(parent):
 def atomic_text(path, text, *, retry_seconds=1):
     # A leftover from an interrupted write must not poison the next session.
     # Use our own same-directory file; keep the old published report intact.
-    fd, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".pending", dir=path.parent)
+    fd, name = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".pending", dir=path.parent
+    )
     pending = Path(name)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
@@ -418,7 +415,9 @@ def atomic_text(path, text, *, retry_seconds=1):
             except PermissionError:
                 if os.name != "nt" or time.monotonic() >= deadline:
                     raise
-                time.sleep(0.02)  # A concurrent results reader can briefly deny replacement.
+                time.sleep(
+                    0.02
+                )  # A concurrent results reader can briefly deny replacement.
     finally:
         pending.unlink(missing_ok=True)
 
@@ -477,7 +476,9 @@ def final_boundary_pair(processed_end):
 
 
 class GapRecords:
-    def __init__(self, start, end, minimum, stream, detail_minimum=None, count_minimum=None):
+    def __init__(
+        self, start, end, minimum, stream, detail_minimum=None, count_minimum=None
+    ):
         self.start, self.end, self.minimum, self.stream = start, end, minimum, stream
         self.detail_minimum = minimum if detail_minimum is None else detail_minimum
         self.count_minimum = minimum if count_minimum is None else count_minimum
@@ -539,13 +540,16 @@ def write_bin_outputs(folder, args, end, position, status, rows):
         writer = csv.writer(output, lineterminator="\n")
         writer.writerow(("index", "start", "end", "count"))
         writer.writerows(
-            (i + 1, boundaries[i], boundaries[i + 1], counts[i]) for i in range(args.bins)
+            (i + 1, boundaries[i], boundaries[i + 1], counts[i])
+            for i in range(args.bins)
         )
         atomic_text(folder / "bins.csv", output.getvalue())
         return {"counts_csv": name, "bins_csv": "bins.csv", "partial_csv": None}
     output = io.StringIO(newline="")
     writer = csv.writer(output, lineterminator="\n")
-    writer.writerow(("index", "start", "end", "count_observed", "coverage", "covered_end"))
+    writer.writerow(
+        ("index", "start", "end", "count_observed", "coverage", "covered_end")
+    )
     for i, count in enumerate(counts):
         left, right = boundaries[i], boundaries[i + 1]
         coverage = (
@@ -587,7 +591,9 @@ class ProcessClock:
                 ctypes.POINTER(wintypes.FILETIME),
             ) * 4
             kernel.GetProcessTimes.restype = wintypes.BOOL
-            kernel.GetSystemTimeAsFileTime.argtypes = (ctypes.POINTER(wintypes.FILETIME),)
+            kernel.GetSystemTimeAsFileTime.argtypes = (
+                ctypes.POINTER(wintypes.FILETIME),
+            )
             kernel.GetSystemTimeAsFileTime.restype = None
             self._ft = wintypes.FILETIME
             self._kernel = kernel
@@ -595,7 +601,9 @@ class ProcessClock:
             now = self._ft()
             kernel.GetSystemTimeAsFileTime(ctypes.byref(now))
             self._creation = creation
-            self.begin = time.monotonic() - max(0.0, (self._value(now) - creation) / 1e7)
+            self.begin = time.monotonic() - max(
+                0.0, (self._value(now) - creation) / 1e7
+            )
             self.started = dt.datetime.fromtimestamp(creation / 1e7 - 11644473600, UTC)
 
     @staticmethod
@@ -683,7 +691,9 @@ def file_sha256(path):
 
 def check_resume_checkpoint(path, start, length, position, tests, gap_min=None):
     if gap_min is None:
-        raise ValueError("Legacy CP is history-only; an effective Native gap identity is required")
+        raise ValueError(
+            "Legacy CP is history-only; an effective Native gap identity is required"
+        )
     identity = {
         "native_protocol": PROTOCOL,
         "gap_min": int(gap_min),
@@ -706,7 +716,9 @@ class Telemetry:
         if not tool:
             self.error = "nvidia-smi unavailable; telemetry disabled"
             return
-        self.thread = threading.Thread(target=self._sample, args=(tool, uuid), daemon=True)
+        self.thread = threading.Thread(
+            target=self._sample, args=(tool, uuid), daemon=True
+        )
         self.thread.start()
 
     def _sample(self, tool, uuid):
@@ -743,13 +755,18 @@ class Telemetry:
                         **child_options(),
                     )
                     if result.returncode:
-                        raise RuntimeError(result.stderr.strip() or "nvidia-smi query failed")
+                        raise RuntimeError(
+                            result.stderr.strip() or "nvidia-smi query failed"
+                        )
                     row = next(csv.reader([result.stdout.strip()]))
                     if len(row) != 9 or row[1].strip().lower() != uuid.lower():
                         raise RuntimeError("Unexpected telemetry CSV shape")
                     writer.writerow([dt.datetime.now(UTC).isoformat()] + row)
                     stream.flush()
-                    self.latest = {"sm_mhz": row[2].strip(), "memory_mhz": row[3].strip()}
+                    self.latest = {
+                        "sm_mhz": row[2].strip(),
+                        "memory_mhz": row[3].strip(),
+                    }
                     self.stop_event.wait(max(0.0, 1.0 - (time.monotonic() - before)))
         except Exception as error:
             self.error = str(error)
@@ -809,11 +826,14 @@ def run_diagnostic(worker, environment, folder, benchmark=False):
             raise RuntimeError(
                 "Exit3 was not a verified unsupported-reference result after PGN self-test; fallback refused"
             )
-        print("PGN self-test passed. Running the exact public reference with Windows NVRTC...")
+        print(
+            "PGN self-test passed. Running the exact public reference with Windows NVRTC..."
+        )
         # The NVRTC/Driver code runs in a separately owned child, never here.
         fallback_environment = environment.copy()
+        fallback_environment.pop("SCOUT_LAUNCHER", None)
         fallback_environment.pop("PGN_R5_LAUNCHER", None)
-        fallback_environment["PGN_R5_INTERNAL_NVRTC_OUTPUT"] = str(folder)
+        fallback_environment["SCOUT_DIAGNOSTIC_OUTPUT"] = str(folder)
         fallback_command = (
             [sys.executable]
             if getattr(sys, "frozen", False)
@@ -879,32 +899,50 @@ def brian_report(
 ):
     selected = top_rows(rows, args.report_top)
     full = (
-        "\n".join(f"{gap:d} {merit:.4f} {lower:d}" for gap, merit, lower in selected) or "(No gaps)"
+        "\n".join(f"{gap:d} {merit:.4f} {lower:d}" for gap, merit, lower in selected)
+        or "(No gaps)"
     )
     largest = max((row[0] for row in rows), default=0)
     best = (
         "\n".join(
-            f"{gap:d} {merit:.4f} {lower:d}" for gap, merit, lower in selected if gap == largest
+            f"{gap:d} {merit:.4f} {lower:d}"
+            for gap, merit, lower in selected
+            if gap == largest
         )
         or "(No gaps)"
     )
     clean_name = str(name).replace("\r", " ").replace("\n", " ")
+    from pgn_output import threshold_description
+
+    pin = getattr(args, "_threshold_pin", None)
+    count_description = threshold_description(pin, "count", args.count_gap)
+    detail_description = threshold_description(pin, "detail", args.detail_gap)
+    count_label = (
+        "Gaps meeting local count threshold"
+        if "local threshold" in count_description
+        else f"Gaps >= {args.count_gap}"
+    )
+    detail_label = (
+        "Detailed gaps meeting local detail threshold"
+        if "local threshold" in detail_description
+        else f"Detailed gaps >= {args.detail_gap}"
+    )
     return (
         "======== PRIME GAP REPORT ========\n\n"
         f"Name: {clean_name}\nStart time: {started.isoformat()}\nEnd time: {ended.isoformat()}\n"
         f"GPU: {device['model']}\nGPU index: {args.gpu}\nCUDA capability: {device['cc_major']}.{device['cc_minor']}\n"
         f"GPU UUID: {device['uuid']}\nSession ID: {getattr(args, '_session_id', '--')}\n"
         f"GPU memory: {int(device['vram_bytes']) // (1024 * 1024)} MiB\nCUDA driver API version: {device.get('cuda_driver_api_version', device.get('driver_version', '--'))}\n"
-        f"Target gap size: {args.detail_gap}\nCount threshold: {args.count_gap}\n"
-        f"Gaps >= {args.count_gap}: {counted_gaps if counted_gaps is not None else len(rows)}\n"
-        f"Detailed gaps >= {args.detail_gap}: {getattr(args, '_detail_total_count', len(rows))}\nRange pieces: {args.bins}\n"
+        f"Target gap size: {detail_description}\nCount threshold: {count_description}\n"
+        f"{count_label}: {counted_gaps if counted_gaps is not None else len(rows)}\n"
+        f"{detail_label}: {getattr(args, '_detail_total_count', len(rows))}\nRange pieces: {args.bins}\n"
         f"Minimum gap setting: {args.min_gap}\n"
         f"Positions processed: {report_positions(position)}\n"
         f"Range searched: {args.start} - {args.start + position}\n"
         f"Requested range: {args.start} - {end}\nStatus: {status}\n"
         f"Active worker wall seconds (all instances, initialization included): {elapsed:.7f}\n"
         f"Paused seconds (excluded from active rate): {paused_seconds:.7f}\nNetwork: local search; no PGN submission\n\n"
-        f"Largest gap:\n{best}\n\nTop {args.report_top} detailed gaps >= {args.detail_gap} (largest first; counts are complete):\n{full}\n"
+        f"Largest gap:\n{best}\n\nTop {args.report_top} detailed gaps meeting {detail_description} (largest first; counts are complete):\n{full}\n"
     )
 
 
@@ -940,7 +978,11 @@ def idle_menu_before_gpu(args, parser):
         )
     }
     config.update(
-        start=args.start, end=end, length=end - args.start, gpu=args.gpu, output=str(output)
+        start=args.start,
+        end=end,
+        length=end - args.start,
+        gpu=args.gpu,
+        output=str(output),
     )
     config.update(config_fields(args, end))
     context = {
@@ -1000,15 +1042,21 @@ def idle_menu_before_gpu(args, parser):
             if key in previous:
                 context[key] = previous[key]
     context["global_defaults"] = dict(
-        context["_ui_state"].get("global_defaults_override", globals().get("_global_defaults", {}))
+        context["_ui_state"].get(
+            "global_defaults_override", globals().get("_global_defaults", {})
+        )
     )
     context["_submit_action"] = submit
     from pgn_ui_controller import catalog_sessions
 
-    resumable = next((session for session in catalog_sessions(context) if session.resumable), None)
+    resumable = next(
+        (session for session in catalog_sessions(context) if session.resumable), None
+    )
     if resumable:
         context["resume_folder"] = str(resumable.folder)
-        context["resume_configuration"] = dict(resumable.metadata.get("configuration") or {})
+        context["resume_configuration"] = dict(
+            resumable.metadata.get("configuration") or {}
+        )
         context["resume_device"] = dict(resumable.metadata.get("device") or {})
     restore_start_failure(context)
     args._idle_menu_context = context
@@ -1042,7 +1090,8 @@ def idle_menu_before_gpu(args, parser):
         "target_merit": args.target_merit,
         "outputfile": str(output),
         "key_help": "S Start | M menu | F sessions | Q quit",
-        "idle_start_available": not context.get("resume_folder") or bool(context.get("prepared_request")),
+        "idle_start_available": not context.get("resume_folder")
+        or bool(context.get("prepared_request")),
         "resume_folder": context.get("resume_folder"),
     }
     desk = Dashboard()
@@ -1058,13 +1107,20 @@ def idle_menu_before_gpu(args, parser):
             from pgn_idle_device import IdleDeviceProbe
 
             try:
-                probe = IdleDeviceProbe([str(resolve_worker(args.worker)), "--device-info"], options=child_options())
+                probe = IdleDeviceProbe(
+                    [str(resolve_worker(args.worker)), "--device-info"],
+                    options=child_options(),
+                )
             except (OSError, RuntimeError) as error:
                 state["gpu_name"] = "GPU discovery unavailable: " + str(error)
             while True:
                 prepared = context.get("prepared_request")
                 resuming = not prepared and bool(context.get("resume_folder"))
-                view = prepared or (context.get("resume_configuration") if resuming else None) or config
+                view = (
+                    prepared
+                    or (context.get("resume_configuration") if resuming else None)
+                    or config
+                )
                 signature = repr(view)
                 if signature != preview_signature:
                     # The plan shown on Idle must be the same plan dispatched
@@ -1075,23 +1131,51 @@ def idle_menu_before_gpu(args, parser):
                         preview = copy.copy(args)
                         apply_new_parameters(preview, view)
                         view_end = validate_range(preview, parser)
-                        state.update(start=preview.start, end=view_end, minimum_gap=preview.count_gap,
-                                     detailed_min_gap=preview.detail_gap, target_merit=preview.target_merit)
+                        state.update(
+                            start=preview.start,
+                            end=view_end,
+                            minimum_gap=preview.count_gap,
+                            detailed_min_gap=preview.detail_gap,
+                            target_merit=preview.target_merit,
+                        )
                     else:
-                        state.update(start=int(view.get("start", args.start)), end=int(view.get("end", end)),
-                                     minimum_gap=view.get("count_gap", args.count_gap),
-                                     detailed_min_gap=view.get("detail_gap", args.detail_gap),
-                                     target_merit=view.get("target_merit", args.target_merit))
+                        state.update(
+                            start=int(view.get("start", args.start)),
+                            end=int(view.get("end", end)),
+                            minimum_gap=view.get("count_gap", args.count_gap),
+                            detailed_min_gap=view.get("detail_gap", args.detail_gap),
+                            target_merit=view.get("target_merit", args.target_merit),
+                        )
                     preview_signature = signature
                     if resuming:
                         import sqlite3
                         from pgn_statistics import saved_range_preview
+
                         try:
-                            state.update(saved_range_preview(context["resume_folder"], view, args.display_rows))
-                        except (OSError, ValueError, KeyError, TypeError, sqlite3.Error):
-                            state.update(range_statistics=None, statistics_notice="Resume to load saved statistics")
+                            state.update(
+                                saved_range_preview(
+                                    context["resume_folder"], view, args.display_rows
+                                )
+                            )
+                        except (
+                            OSError,
+                            ValueError,
+                            KeyError,
+                            TypeError,
+                            sqlite3.Error,
+                        ):
+                            state.update(
+                                range_statistics=None,
+                                statistics_notice="Resume to load saved statistics",
+                            )
                     else:
-                        state.update(position=0, tests=0, gap_count=0, gaps=[], range_statistics=None)
+                        state.update(
+                            position=0,
+                            tests=0,
+                            gap_count=0,
+                            gaps=[],
+                            range_statistics=None,
+                        )
                 if probe:
                     discovery = probe.poll()
                     if discovery:
@@ -1099,17 +1183,30 @@ def idle_menu_before_gpu(args, parser):
                         values = view
                         try:
                             selected_index = values.get("gpu", args.gpu)
-                            if resuming and context.get("resume_device", {}).get("uuid"):
-                                matches = [d for d in devices if d["uuid"] == context["resume_device"]["uuid"]]
+                            if resuming and context.get("resume_device", {}).get(
+                                "uuid"
+                            ):
+                                matches = [
+                                    d
+                                    for d in devices
+                                    if d["uuid"] == context["resume_device"]["uuid"]
+                                ]
                                 if len(matches) != 1:
-                                    raise RuntimeError("Saved session GPU is not visible")
+                                    raise RuntimeError(
+                                        "Saved session GPU is not visible"
+                                    )
                                 selected_index = matches[0]["index"]
                             selected, _ = select_gpu(devices, selected_index)
-                            state.update(gpu_name=selected["model"], gpu_index=selected["index"],
-                                         vram_mib=int(selected["vram_bytes"]) // (1024 * 1024),
-                                         compute_capability=f"{selected['cc_major']}.{selected['cc_minor']}",
-                                         cuda_driver_api_version=info.get("driver_version"))
-                            context.update(gpu_name=selected["model"], gpu_index=selected["index"])
+                            state.update(
+                                gpu_name=selected["model"],
+                                gpu_index=selected["index"],
+                                vram_mib=int(selected["vram_bytes"]) // (1024 * 1024),
+                                compute_capability=f"{selected['cc_major']}.{selected['cc_minor']}",
+                                cuda_driver_api_version=info.get("driver_version"),
+                            )
+                            context.update(
+                                gpu_name=selected["model"], gpu_index=selected["index"]
+                            )
                             if probed_uuid != selected["uuid"]:
                                 if clocks:
                                     clocks.finish()
@@ -1123,18 +1220,31 @@ def idle_menu_before_gpu(args, parser):
                         state["gpu_name"] = probe.error
                 if clocks:
                     observed = clocks.snapshot()
-                    state.update(clock_sm_mhz=observed.get("sm_mhz"), clock_mem_mhz=observed.get("memory_mhz"))
-                state["idle_start_available"] = not context.get("resume_folder") or bool(context.get("prepared_request"))
-                desk.update(state)  # Refresh viewport/hit map/hover even while no worker runs.
+                    state.update(
+                        clock_sm_mhz=observed.get("sm_mhz"),
+                        clock_mem_mhz=observed.get("memory_mhz"),
+                    )
+                state["idle_start_available"] = not context.get(
+                    "resume_folder"
+                ) or bool(context.get("prepared_request"))
+                desk.update(
+                    state
+                )  # Refresh viewport/hit map/hover even while no worker runs.
                 pressed = keys.poll()
                 if pressed == "q":
                     return None
-                if pressed == "p" and context.get("resume_folder") and not context.get("prepared_request"):
+                if (
+                    pressed == "p"
+                    and context.get("resume_folder")
+                    and not context.get("prepared_request")
+                ):
                     return MenuAction("resume", {"folder": context["resume_folder"]})
                 if pressed == "s":
                     prepared = context.get("prepared_request")
                     if not prepared and context.get("resume_folder"):
-                        return MenuAction("resume", {"folder": context["resume_folder"]})
+                        return MenuAction(
+                            "resume", {"folder": context["resume_folder"]}
+                        )
                     values = dict(prepared or context.get("configuration") or config)
                     if prepared and context.get("prepared_request_saved_id"):
                         values["plan_id"] = context["prepared_request_saved_id"]
@@ -1163,7 +1273,7 @@ def _main(argv=None):
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="backslashreplace")
-    if argv is None and os.environ.get("PGN_R5_LAUNCHER") == "1":
+    if argv is None and launcher_requested(os.environ):
         from pgn_launcher import argv_from_environment
 
         try:
@@ -1178,9 +1288,15 @@ def _main(argv=None):
     args = parser.parse_args(supplied)
     args._idle_was_requested = bool(args.idle)
     if args.idle and (
-        args.resume or args.headless or args.list_gpus or args.self_test or args.fermat_diagnostic
+        args.resume
+        or args.headless
+        or args.list_gpus
+        or args.self_test
+        or args.fermat_diagnostic
     ):
-        parser.error("--idle cannot be combined with resume, headless or diagnostic/device actions")
+        parser.error(
+            "--idle cannot be combined with resume, headless or diagnostic/device actions"
+        )
     if not (0 < args.target_merit < float("inf")):
         parser.error("--target-merit must be finite and positive")
     end = validate_range(args, parser)
@@ -1214,7 +1330,9 @@ def _main(argv=None):
     )
     from pgn_startup_recovery import pending_same_range, recover_closed_sessions
 
-    if not args.headless and not any((args.list_gpus, args.self_test, args.fermat_diagnostic)):
+    if not args.headless and not any(
+        (args.list_gpus, args.self_test, args.fermat_diagnostic)
+    ):
         recover_closed_sessions(args.output or default_output_base())
     unfinished = pending_same_range(args, end, args.output or default_output_base())
     if unfinished:
@@ -1237,7 +1355,10 @@ def _main(argv=None):
             if choice.kind == "new":
                 retained = getattr(args, "_idle_menu_context", {})
                 retained["prepared_request"] = dict(choice.values)
-                retained["configuration"] = {**retained.get("configuration", {}), **choice.values}
+                retained["configuration"] = {
+                    **retained.get("configuration", {}),
+                    **choice.values,
+                }
             if choice.kind == "activate_queued":
                 args.resume = Path(choice.values["parent_folder"])
                 args._activate_queued_request = dict(choice.values)
@@ -1259,11 +1380,18 @@ def _main(argv=None):
                 provided = set()
         controller = None
         store = None
+        startup_dashboard = None
         startup_phase = "open session"
         try:
+            from pgn_starting import show_starting
+            startup_dashboard = show_starting(
+                args, getattr(args, "_idle_menu_context", None), read_session_metadata, end=end
+            )
             if args.resume:
                 controller = SessionControllerLock(args.resume)
-                require_new_configuration(read_session_metadata(args.resume)["configuration"])
+                require_new_configuration(
+                    read_session_metadata(args.resume)["configuration"]
+                )
             store = SessionStore.load(args.resume) if args.resume else None
             if store and store.meta.get("prepared_replacement"):
                 from pgn_prepared import recover_prepared_replacement
@@ -1281,7 +1409,13 @@ def _main(argv=None):
                         "Resume uses its frozen threshold policy; omit all threshold overrides"
                     )
                 resume_args(args, config)
-                for name in ("min_gap", "count_gap", "detail_gap", "profile", "chunk_length"):
+                for name in (
+                    "min_gap",
+                    "count_gap",
+                    "detail_gap",
+                    "profile",
+                    "chunk_length",
+                ):
                     flag = "--" + name.replace("_", "-")
                     if flag in provided and getattr(args, name) != config.get(name):
                         raise ValueError(
@@ -1325,7 +1459,9 @@ def _main(argv=None):
                     )
                 return 0
             if store:
-                matches = [d for d in devices if d["uuid"] == store.meta["device"]["uuid"]]
+                matches = [
+                    d for d in devices if d["uuid"] == store.meta["device"]["uuid"]
+                ]
                 if len(matches) != 1:
                     raise RuntimeError(
                         "Saved session GPU UUID is not visible; select that device before resume"
@@ -1366,21 +1502,29 @@ def _main(argv=None):
                 config.update(config_fields(args, end))
                 if getattr(args, "_plan_id", None):
                     config.update(
-                        plan_id=args._plan_id, plan_root=getattr(args, "_plan_root", None)
+                        plan_id=args._plan_id,
+                        plan_root=getattr(args, "_plan_root", None),
                     )
                 store = SessionStore.create(folder, config, device)
             folder = store.folder
             _last_session_folder = folder
             args._session_id = store.meta["session_id"]
             if args.headless or not sys.stdout.isatty():
-                print("PGN 68 | Session", args._session_id, "| actual GPU", device["model"])
+                print(
+                    "PGN 68 | Session",
+                    args._session_id,
+                    "| actual GPU",
+                    device["model"],
+                )
                 print("Actual output folder:", folder)
             if args.self_test or args.fermat_diagnostic:
                 worker = resolve_worker(
                     args.worker, f"sm{device['cc_major']}{device['cc_minor']}", 64
                 )
                 diagnostic = folder / ("diagnostic-" + str(time.time_ns()))
-                run_diagnostic(worker, environment, diagnostic, benchmark=args.fermat_diagnostic)
+                run_diagnostic(
+                    worker, environment, diagnostic, benchmark=args.fermat_diagnostic
+                )
                 store.closed("DIAGNOSTIC_COMPLETE", 0, 0)
                 print("Diagnostic passed:", diagnostic)
                 return 0
@@ -1483,7 +1627,9 @@ def _main(argv=None):
                         ownership="OS_GPU_LEASE_V1",
                     )
                     wanted_config.update(config_fields(wanted, wanted_end))
-                    wanted_root = (wanted.output or default_output_base()).expanduser().resolve()
+                    wanted_root = (
+                        (wanted.output or default_output_base()).expanduser().resolve()
+                    )
                     same_root = wanted_root == folder.parent.resolve()
                     if (
                         wanted_config == store.meta["configuration"]
@@ -1557,7 +1703,10 @@ def _main(argv=None):
                     runtime_version=gpu_info.get("runtime_version"),
                 )
                 child = activate_next(
-                    store, actual, selected_child=entry["child_session_id"], allow_incomplete=True
+                    store,
+                    actual,
+                    selected_child=entry["child_session_id"],
+                    allow_incomplete=True,
                 )
                 args._activate_queued_request = None
                 store.close()
@@ -1565,7 +1714,12 @@ def _main(argv=None):
                 args.worker = None
                 provided = set()
                 continue
-            last = run_engine(store, args, device, environment, gpu_info, sys.modules[__name__])
+            if startup_dashboard:
+                startup_dashboard.finish()
+                startup_dashboard = None
+            last = run_engine(
+                store, args, device, environment, gpu_info, sys.modules[__name__]
+            )
             action = last.get("action")
             if action and action.kind == "activate_queued":
                 values = action.values
@@ -1588,7 +1742,9 @@ def _main(argv=None):
                 fresh_info, fresh_devices = enumerate_gpus(resolve_worker(args.worker))
                 if entry["configuration"].get("gpu_uuid"):
                     match = [
-                        d for d in fresh_devices if d["uuid"] == entry["configuration"]["gpu_uuid"]
+                        d
+                        for d in fresh_devices
+                        if d["uuid"] == entry["configuration"]["gpu_uuid"]
                     ]
                     if len(match) != 1:
                         raise RuntimeError("Queued GPU UUID is no longer visible")
@@ -1617,7 +1773,9 @@ def _main(argv=None):
                 apply_new_parameters(args, action.values)
                 end = validate_range(args, parser)
                 provided = set()
-                args._confirm_plan = False  # Start already explicitly submitted this range.
+                args._confirm_plan = (
+                    False  # Start already explicitly submitted this range.
+                )
                 continue
             if action and action.kind == "resume":
                 args.resume = Path(action.values["folder"])
@@ -1685,7 +1843,9 @@ def _main(argv=None):
                 }
             context["configuration"]["start"] = args.start
             context["configuration"]["end"] = end
-            remember_start_failure(context, error, startup_phase, getattr(store, "folder", None))
+            remember_start_failure(
+                context, error, startup_phase, getattr(store, "folder", None)
+            )
             if store is not None:
                 store.close()
                 store = None
@@ -1732,13 +1892,15 @@ def _main(argv=None):
                 args.menu = not args.idle
                 args.resume = None
         finally:
+            if startup_dashboard:
+                startup_dashboard.finish()
             if controller:
                 controller.release()
 
 
 def main(argv=None):
     supplied = list(sys.argv[1:] if argv is None else argv)
-    if argv is None and os.environ.get("PGN_R5_LAUNCHER") == "1":
+    if argv is None and launcher_requested(os.environ):
         from pgn_launcher import argv_from_environment
 
         try:
@@ -1784,8 +1946,10 @@ if __name__ == "__main__":
         from pgn_detached_worker import boot_main
 
         raise SystemExit(boot_main(os.environ["PGN_PRIVATE_OWNER_BOOTSTRAP"]))
-    if os.environ.get("PGN_R5_INTERNAL_NVRTC_OUTPUT"):
+    if os.environ.get("SCOUT_DIAGNOSTIC_OUTPUT"):
         from fermat_compare_nvrtc import run_diagnostic as _nvrtc_child
 
-        raise SystemExit(_nvrtc_child(0, Path(os.environ["PGN_R5_INTERNAL_NVRTC_OUTPUT"])))
+        raise SystemExit(
+            _nvrtc_child(0, Path(os.environ["SCOUT_DIAGNOSTIC_OUTPUT"]))
+        )
     raise SystemExit(main())

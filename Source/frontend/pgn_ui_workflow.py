@@ -6,6 +6,11 @@ from decimal import Decimal
 ACTIVE = frozenset(("STARTING", "SEARCHING", "PAUSING", "STOP_REQUESTED"))
 
 
+def starting_requested(context):
+    pending = context.get("_ui_state", {}).get("pending_worker_request") or {}
+    return pending.get("kind") in ("new", "resume", "activate_queued")
+
+
 def phase(context):
     active = context.get("active_session") or context
     value = (
@@ -34,7 +39,7 @@ def new_defaults(context):
         "headless": False,
         "menu": False,
         "worker": None,
-        "name": "Robert",
+        "name": "",
         "profile": "auto",
         "min_gap": "auto",
         "count_gap": None,
@@ -180,8 +185,6 @@ def primary(card, context):
 
 def pause_control(context):
     status = phase(context)
-    if status == "IDLE" and context.get("idle_start_available"):
-        return {"label": "Start", "key": "s", "shortcut": "S", "enabled": True}
     if context.get("_ui_state", {}).get("pending_worker_request"):
         return {
             "label": "Pausing…" if status == "PAUSING" else "Pending…",
@@ -189,6 +192,8 @@ def pause_control(context):
             "shortcut": "P",
             "enabled": False,
         }
+    if status == "IDLE" and context.get("idle_start_available"):
+        return {"label": "Start", "key": "s", "shortcut": "S", "enabled": True}
     if status in ("STARTING", "SEARCHING"):
         return {"label": "Pause", "key": "p", "shortcut": "P", "enabled": True}
     if status in ("PAUSING", "STOP_REQUESTED"):

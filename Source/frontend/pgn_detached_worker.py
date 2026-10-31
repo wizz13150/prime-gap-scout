@@ -59,7 +59,7 @@ def boot_main(path):
     from pgn_owned import GpuLease, WindowsOwnedProcess, _kernel, _recorded_alive, image_hash
 
     path = Path(path).resolve()
-    data = load(path)
+    data = _load_publication(path)
     root = path.parent
     token = data["token"]
     if root.name != "native-owner-" + token:
@@ -120,14 +120,14 @@ def boot_main(path):
             if time.monotonic() > until:
                 raise RuntimeError("Launch identity commitment timed out")
             time.sleep(0.01)
-        request = load(root / "resume.json")
+        request = _load_publication(root / "resume.json")
         if request["token"] != token:
             raise ValueError("Stale owner command")
         identity = Path(request["identity"]).resolve()
         if identity != root.parent / "native-owner-current.json":
             raise ValueError("Launch identity path escaped this session")
         process.commit_identity(identity)
-        committed = load(identity)
+        committed = _load_publication(identity)
         if committed.get("pid") != process.pid or str(committed.get("birth")) != process.birth:
             raise ValueError("Committed child identity changed")
         atomic(root / "committed-identity.json", committed)

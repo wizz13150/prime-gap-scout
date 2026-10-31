@@ -88,5 +88,5 @@ class Tests(unittest.TestCase):
    parser=pgn68.argument_parser();args=parser.parse_args(['--idle','--start','2e20','--length','1e12','--output',folder])
    with(patch.object(pgn68,'Dashboard',Dashboard),patch.object(pgn68,'PauseKeys',Keys),patch.object(pgn68,'resolve_worker',lambda _:Path('unit-worker')),patch('pgn_idle_device.IdleDeviceProbe',Probe),patch('pgn_gpu_monitor.GpuClockMonitor',Clocks),patch('pgn_ui_controller.catalog_sessions',lambda _:[]),patch('pgn_menu.menu',menu)):
     action=pgn68.idle_menu_before_gpu(args,parser)
-   self.assertEqual(action.values['start'],frames[-1]['start']);self.assertEqual(action.values['end'],frames[-1]['end']);self.assertEqual(frames[-1]['minimum_gap'],1332)
+   self.assertEqual(action.values['start'],frames[-1]['start']);self.assertEqual(action.values['end'],frames[-1]['end']);self.assertEqual(frames[-1]['minimum_gap'],1336)
 if __name__=='__main__':unittest.main(verbosity=2)

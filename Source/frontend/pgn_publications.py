@@ -131,6 +131,14 @@ class WorkRates:
         self.current = None
         self.prp_current = None
 
+    def begin_piece(self, preserve_window=False):
+        if not preserve_window:
+            self.begin_instance()
+            return
+        # Native counters restart at zero for each piece. Keep the active-time
+        # window, but never charge the interval between pieces as GPU work.
+        self.last = None
+
     def add(self, samples):
         for stamp, pos, tests in samples:
             if self.last is not None:

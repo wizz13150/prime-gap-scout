@@ -126,6 +126,8 @@ class Dashboard:
         self._size = None
         self._closed = False
         self._console_mode = None
+        self._fit_request = None
+        self._classic_window = None
         self._rate_samples = []
         self._rate_window_matured = False
         stream_name = str(getattr(self._stream, "name", "")).upper()
@@ -167,6 +169,118 @@ class Dashboard:
         size = terminal_size(stream=self._stream, fallback=(110, 30))
         # Interactive output owns no-wrap and uses explicit row positioning.
         return max(1, size.columns), max(1, size.lines)
+
+    def _fit_console_height(self, requested, columns=None):
+        """Fit an owned classic-console viewport on startup or a Rows change.
+
+        Fit the preferred three-panel width as well as the natural height.
+        The owned dashboard has no scrollback: its buffer matches the viewport.
+        Preserve the font unless the selected row count cannot fit the monitor.
+        Pseudoconsole hosts retain control of their own window.
+        """
+        if os.name != "nt" or not self._ansi or not self._console_mode:
+            return False
+        try:
+            import ctypes as C
+            from ctypes import wintypes as T
+
+            class Coord(C.Structure):
+                _fields_ = [("X", T.SHORT), ("Y", T.SHORT)]
+
+            class Rect(C.Structure):
+                _fields_ = [("Left", T.SHORT), ("Top", T.SHORT), ("Right", T.SHORT), ("Bottom", T.SHORT)]
+
+            class Info(C.Structure):
+                _fields_ = [("size", Coord), ("cursor", Coord), ("attributes", T.WORD),
+                            ("window", Rect), ("maximum", Coord)]
+
+            class Font(C.Structure):
+                _fields_ = [("size",T.ULONG),("index",T.DWORD),("cell",Coord),
+                            ("family",T.UINT),("weight",T.UINT),("face",T.WCHAR*32)]
+
+            kernel, handle, _ = self._console_mode
+            kernel.GetConsoleScreenBufferInfo.argtypes = [T.HANDLE, C.POINTER(Info)]
+            kernel.GetLargestConsoleWindowSize.argtypes = [T.HANDLE]
+            kernel.GetLargestConsoleWindowSize.restype = Coord
+            kernel.SetConsoleScreenBufferSize.argtypes = [T.HANDLE, Coord]
+            kernel.SetConsoleWindowInfo.argtypes = [T.HANDLE, T.BOOL, C.POINTER(Rect)]
+            info = Info()
+            if not kernel.GetConsoleScreenBufferInfo(handle, C.byref(info)):
+                return False
+            current = info.window.Bottom-info.window.Top+1
+            current_columns = info.window.Right-info.window.Left+1
+            requested_columns = max(2, int(columns or current_columns))
+            largest = kernel.GetLargestConsoleWindowSize(handle)
+            target = min(max(2, int(requested)), largest.Y)
+            target_columns = min(requested_columns, largest.X)
+            from pgn_console_window import console_window
+            outer_window = console_window()
+            self._classic_window = outer_window
+            font_height = font_width = None
+            changed_font = False
+            if outer_window:
+                kernel.GetCurrentConsoleFontEx.argtypes = [T.HANDLE,T.BOOL,C.POINTER(Font)]
+                kernel.SetCurrentConsoleFontEx.argtypes = [T.HANDLE,T.BOOL,C.POINTER(Font)]
+                font = Font();font.size = C.sizeof(font)
+                if kernel.GetCurrentConsoleFontEx(handle,False,C.byref(font)):
+                    # Reduce the existing typeface only when needed to keep the
+                    # complete selected rows and caption on this monitor.
+                    for font_size in range(font.cell.Y, 7, -1):
+                        if font_size != font.cell.Y:
+                            font.cell.X = 0
+                            font.cell.Y = font_size
+                            if not kernel.SetCurrentConsoleFontEx(handle,False,C.byref(font)):
+                                break
+                            changed_font = True
+                            if not kernel.GetCurrentConsoleFontEx(handle,False,C.byref(font)):
+                                break
+                        if not kernel.GetConsoleScreenBufferInfo(handle,C.byref(info)):
+                            return False
+                        current = info.window.Bottom-info.window.Top+1
+                        current_columns = info.window.Right-info.window.Left+1
+                        font_width, font_height = font.cell.X, font.cell.Y
+                        maximum_columns, maximum_rows = outer_window.maximum_viewport(
+                            current_columns,current,font_width,font_height)
+                        largest = kernel.GetLargestConsoleWindowSize(handle)
+                        target = min(max(2,int(requested)),largest.Y,maximum_rows)
+                        target_columns = min(requested_columns,largest.X,maximum_columns)
+                        if target >= requested and target_columns >= requested_columns:
+                            break
+            if min(target, target_columns) < 2:
+                return False
+            if (target == current and target_columns == current_columns
+                    and (not outer_window or (info.size.X == target_columns
+                         and info.size.Y == target and not info.window.Left
+                         and not info.window.Top))):
+                if outer_window:
+                    outer_window.contain()
+                    changed_font = outer_window.hide_scrollbars() or changed_font
+                return changed_font
+            buffer_columns = max(info.size.X, info.window.Left+target_columns)
+            buffer_rows = max(info.size.Y, info.window.Top+target)
+            if (buffer_columns,buffer_rows) != (info.size.X,info.size.Y):
+                if not kernel.SetConsoleScreenBufferSize(handle, Coord(buffer_columns,buffer_rows)):
+                    return False
+            if outer_window and font_height and font_width:
+                outer_window.resize_for_viewport(current_columns,current,
+                    target_columns,target,font_width,font_height)
+            view = (Rect(0,0,target_columns-1,target-1) if outer_window else
+                    Rect(info.window.Left,info.window.Top,
+                         info.window.Left+target_columns-1,info.window.Top+target-1))
+            if not kernel.SetConsoleWindowInfo(handle, True, C.byref(view)):
+                return False
+            if outer_window:
+                # A larger inherited buffer leaves horizontal/vertical bars
+                # even when every panel fits. This is our own classic-console
+                # dashboard, not a terminal-host or on-disk mining history.
+                kernel.SetConsoleCursorPosition.argtypes = [T.HANDLE,Coord]
+                kernel.SetConsoleCursorPosition(handle,Coord(0,0))
+                kernel.SetConsoleScreenBufferSize(handle,Coord(target_columns,target))
+                outer_window.contain()
+                outer_window.hide_scrollbars()
+            return True
+        except (OSError, ValueError, AttributeError, ImportError):
+            return False
 
     def _write(self, value):
         encoding = getattr(self._stream, "encoding", None)
@@ -396,17 +510,32 @@ class Dashboard:
             return
         self._last_hover = hover
         self._last_paint = now
+        if self._classic_window and self._classic_window.hide_scrollbars():
+            self._fit_request = None
         size = self._dimensions()
         if _released_rc7_projection is not None:
             data = dict(_raw_gpu(self._state))
             data.update({key: value for key, value in self._state.items() if value is not None})
             data["_ui_rate_samples"] = tuple(self._rate_samples)
             data["_ui_rate_window_matured"] = self._rate_window_matured
+            projection = _released_rc7_projection(data, size[0], max(1, size[1]))
+            preferred_width = max(size[0],getattr(projection,"pgn_requested_width",size[0]))
+            # Choose the stable framed layout before resizing. Measuring at a
+            # short initial viewport selects compact cards, whose height changes
+            # again after growth and otherwise leaves the new viewport too short.
+            preferred = _released_rc7_projection(data,preferred_width,max(36,size[1]))
+            fit_request = (data.get("display_rows",10),preferred_width,
+                           getattr(preferred,"pgn_requested_height",size[1]))
+            if fit_request != self._fit_request:
+                self._fit_request = fit_request
+                if self._fit_console_height(getattr(preferred,"pgn_requested_height",size[1]),preferred_width):
+                    size = self._dimensions()
+                    projection = _released_rc7_projection(data, size[0], max(1, size[1]))
             buffer = io.StringIO()
             console = RichConsole(
                 file=buffer,
                 width=size[0],
-                height=max(1, size[1]),
+                height=max(1, min(size[1], getattr(projection, "pgn_content_height", size[1]))),
                 force_terminal=self._ansi,
                 color_system="truecolor" if self._color else None,
                 legacy_windows=False,
@@ -414,7 +543,6 @@ class Dashboard:
                 highlight=False,
                 markup=False,
             )
-            projection = _released_rc7_projection(data, size[0], max(1, size[1]))
             console.print(projection)
             self._frame_hit_regions = getattr(projection, "pgn_hit_regions", [])
             frame = [(line, "plain") for line in buffer.getvalue().splitlines()[: max(1, size[1])]]
@@ -430,7 +558,7 @@ class Dashboard:
                 "dim": "\x1b[2m",
                 "plain": "",
             }
-            for row in range(max(len(frame), len(self._previous))):
+            for row in range(min(size[1], max(len(frame), len(self._previous)))):
                 line = frame[row] if row < len(frame) else ("", "plain")
                 if (
                     changed_size

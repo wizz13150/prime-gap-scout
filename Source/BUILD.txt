@@ -24,15 +24,19 @@ Ubuntu wheel (activate your Python virtual environment):
 If the matching proof runtime is already bundled, omit --proof-wheel.
 Use --archs86 or --archs120 to compile only one supported architecture.
 Results: build/windows/pgn68/ or build/ubuntu/pgn68/. Copy the COMPLETE directory.
-The native build uses one compiler thread and does not modify GPU settings.
+The native build permits four compiler tasks per architecture and does not
+modify GPU settings. Limit the selected architectures when building on a
+resource-constrained host.
 
 SOURCE EXECUTION
 ----------------
 After the native build:
   python frontend/pgn68.py --idle
 Use --help for the complete public CLI. Results are local. Keep the workers,
-metadata and runtime directories together. Preserve compatible historical worker
-images when resuming a checkpoint pinned to their exact executable hash.
+metadata and runtime directories together. Saved ranges preserve their frozen threshold policy and scientific records.
+When the installed worker changes, the trusted completed prefix is archived
+and a fresh optimized child continues from that frontier. No previous worker
+image is executed as a fallback.
 
 INDEPENDENT DIAGNOSTIC FIXTURES
 -----------------------------
@@ -40,3 +44,12 @@ INDEPENDENT DIAGNOSTIC FIXTURES
 This verifies274 fixed Euler/Jacobi cases using Python integer pow, without CUDA,
 a compiler or a historical workspace archive. The optional write mode regenerates
 the checked-in constants. Third-party reference acknowledgments remain intact.
+
+RANGE AND RETENTION POLICY
+--------------------------
+Every starting point in [2^66,2^95) is supported. Work crosses physical words,
+bit widths and retention thresholds automatically; the logical range is not
+limited to an internal chunk. Auto retains the first even gap strictly above
+20.5*ln(p), evaluated at the lower prime p, in steps of two. Existing saved
+policies remain immutable. Reports and separate count/detail filters use that
+same lower-prime policy.

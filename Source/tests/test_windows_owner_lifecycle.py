@@ -8,6 +8,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "frontend"))
 from pgn_detached_worker import DetachedWindowsProcess, atomic
@@ -37,8 +38,39 @@ class ActualWindowsOwnerTests(unittest.TestCase):
                            "image_sha256": executable_hash, "configuration_sha256": "A" * 64,
                            "wal_sequence": index + 1, "session_id": "cpu-lifecycle-fixture"})
                     process.commit_identity(identity)
-                    process.resume()
-                    self.assertEqual(list(process.stdout), ["OWNED_CPU_FIXTURE_COMPLETE\n"])
+                    if index in (0, 11, 23):
+                        # Publish a valid Resume request while a real Win32
+                        # handle denies reads. The suspended child must wait for
+                        # this same request, never fail or launch a replacement.
+                        import pgn_detached_worker
+                        replace = pgn_detached_worker.os.replace
+                        unlocks = []
+
+                        def publish_locked(source, destination):
+                            if Path(destination).name != "resume.json":
+                                return replace(source, destination)
+                            handle = kernel.CreateFileW(str(source), 0x80000000, 0x00000006,
+                                                        None, 3, 0x80, None)
+                            self.assertNotEqual(handle, ctypes.c_void_p(-1).value)
+                            try:
+                                replace(source, destination)
+                            except BaseException:
+                                kernel.CloseHandle(handle)
+                                raise
+                            timer = threading.Timer(0.1, lambda: kernel.CloseHandle(handle))
+                            unlocks.append(timer)
+                            timer.start()
+
+                        try:
+                            with patch("pgn_detached_worker.os.replace", side_effect=publish_locked):
+                                process.resume()
+                                self.assertEqual(list(process.stdout), ["OWNED_CPU_FIXTURE_COMPLETE\n"])
+                        finally:
+                            for timer in unlocks:
+                                timer.join()
+                    else:
+                        process.resume()
+                        self.assertEqual(list(process.stdout), ["OWNED_CPU_FIXTURE_COMPLETE\n"])
                     self.assertEqual(process.controller.wait(10), 0)
                     done = process.root / "done.json"
                     handle = kernel.CreateFileW(str(done), 0x80000000, 0, None, 3, 0x80, None)
