@@ -7,6 +7,18 @@ blockchain connection is required.
 
 ![Prime Gap Scout terminal interface](assets/terminal.png)
 
+## Credits
+
+The CUDA prime-gap search engine builds on **Brian Kehrig's** original
+[prime-gaps-cuda](https://github.com/briankehrig/prime-gaps-cuda) work.
+The original modular arithmetic by **Périg**, acknowledged by Brian's project,
+is also credited. Scout extends this foundation with its optimized search
+specializations, interface, persistence and reporting.
+
+See the [third-party attribution](Source/THIRD-PARTY-NOTICES.txt) for the
+component notices. These credits do not replace upstream copyright notices
+or grant additional licensing rights.
+
 ## Downloads
 
 **Stable release: [v1.3.5](https://github.com/wizz13150/prime-gap-scout/releases/tag/v1.3.5)**
