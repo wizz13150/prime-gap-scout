@@ -1,2 +1,1 @@
-"""Generated from Source/VERSION."""
-VERSION = "1.3.5"
+VERSION = "1.3.6-audit.2"
